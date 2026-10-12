@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Control Domótico IoT - UAEMex</title>
-    <!-- Librería MQTT via WebSocket -->
+    <title>Panel Domótico IoT - UAEMex</title>
+    <!-- Cliente MQTT JS -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
         body {
@@ -42,9 +42,9 @@
 
         .connection-badge {
             margin-top: 10px;
-            padding: 5px 15px;
+            padding: 6px 16px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: bold;
             background-color: #f59e0b;
             color: white;
@@ -55,14 +55,14 @@
             flex-wrap: wrap;
             justify-content: center;
             align-items: flex-start;
-            gap: 30px;
-            max-width: 1000px;
-            margin: 30px auto 0 auto;
-            padding: 0 20px;
+            gap: 25px;
+            max-width: 950px;
+            margin: 25px auto 0 auto;
+            padding: 0 15px;
         }
 
         .controls-container {
-            flex: 1 1 600px;
+            flex: 1 1 550px;
         }
 
         .card {
@@ -85,50 +85,37 @@
         .grid-buttons {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-            gap: 10px;
+            gap: 12px;
             margin-top: 15px;
         }
 
         .button {
-            background-color: #3b82f6;
+            background-color: #22c55e;
             border: none;
             color: white;
-            padding: 12px 15px;
+            padding: 14px 10px;
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
             border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 4px 10px rgba(34, 197, 94, 0.2);
             transition: all 0.2s ease;
             text-align: center;
         }
 
         .button:hover {
             transform: translateY(-2px);
-            background-color: #2563eb;
         }
 
         .button-off {
-            background-color: #64748b;
-            box-shadow: 0 4px 10px rgba(100, 116, 139, 0.2);
-        }
-
-        .button-off:hover {
-            background-color: #475569;
-        }
-
-        .button-danger {
             background-color: #ef4444;
-        }
-
-        .button-danger:hover {
-            background-color: #dc2626;
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
         }
 
         .status-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
+            gap: 12px;
             text-align: center;
         }
 
@@ -140,17 +127,16 @@
         }
 
         .status-val {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             color: #0f172a;
             margin-top: 5px;
         }
 
-        /* Barra de progreso para el tinaco */
         .progress-bar-bg {
             background-color: #e2e8f0;
             border-radius: 10px;
-            height: 20px;
+            height: 22px;
             width: 100%;
             overflow: hidden;
             margin-top: 8px;
@@ -160,13 +146,13 @@
             background-color: #0284c7;
             height: 100%;
             width: 0%;
-            transition: width 0.5s ease;
+            transition: width 0.4s ease;
         }
 
         .team-card {
             background: white;
             padding: 20px;
-            flex: 0 1 250px;
+            flex: 0 1 240px;
             border-radius: 15px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
             border-left: 5px solid #3b82f6;
@@ -195,21 +181,19 @@
 
 <body>
 
-    <!-- Header -->
     <header>
         <h1>Panel de Control IoT - UAEMex</h1>
-        <h2>Simulación Wokwi ESP32 (MQTT HiveMQ)</h2>
-        <div id="mqtt-status" class="connection-badge">Conectando a Broker MQTT...</div>
+        <h2>Simulación Wokwi ESP32 (Interacción Hombre-Máquina)</h2>
+        <div id="mqtt-status" class="connection-badge">Conectando...</div>
     </header>
 
     <div class="main-layout">
 
-        <!-- Panel de Control Principal -->
         <div class="controls-container">
 
-            <!-- Telemetría en Tiempo Real -->
+            <!-- Telemetría -->
             <div class="card">
-                <h3> Sensores & Telemetría</h3>
+                <h3> Sensores en Tiempo Real</h3>
                 <div class="status-grid">
                     <div class="status-box">
                         <small>Temperatura</small>
@@ -220,7 +204,7 @@
                         <div id="val-hum" class="status-val">-- %</div>
                     </div>
                     <div class="status-box">
-                        <small>Estado Lluvia</small>
+                        <small>Sensor Lluvia</small>
                         <div id="val-lluvia" class="status-val" style="color: #22c55e;">Seco</div>
                     </div>
                 </div>
@@ -228,7 +212,7 @@
                 <div style="margin-top: 20px;">
                     <div style="display: flex; justify-content: space-between;">
                         <small><strong>Nivel del Tinaco (Potenciómetro):</strong></small>
-                        <small id="val-tinaco">0%</small>
+                        <small id="val-tinaco" style="font-weight: bold;">0%</small>
                     </div>
                     <div class="progress-bar-bg">
                         <div id="bar-tinaco" class="progress-bar-fill"></div>
@@ -236,7 +220,7 @@
                 </div>
             </div>
 
-            <!-- Control de Iluminación -->
+            <!-- LEDs -->
             <div class="card">
                 <h3> Control de Iluminación (LEDs)</h3>
                 <div class="grid-buttons">
@@ -247,9 +231,9 @@
                 </div>
             </div>
 
-            <!-- Control de Accesos y Ventanas (Servomotores) -->
+            <!-- Servos -->
             <div class="card">
-                <h3> Control de Acceso y Ventanas (Servos)</h3>
+                <h3> Puerta y Ventanas (Servomotores)</h3>
                 <div class="grid-buttons">
                     <button id="btn-puerta" class="button button-off" onclick="togglePuerta()">Puerta: CERRADA</button>
                     <button id="btn-ventanas" class="button button-off" onclick="toggleVentanas()">Ventanas:
@@ -259,7 +243,6 @@
 
         </div>
 
-        <!-- Integrantes del Equipo -->
         <div class="team-card">
             <h3>Integrantes:</h3>
             <ul>
@@ -272,26 +255,33 @@
     </div>
 
     <script>
-        // Tópicos MQTT
         const TOPIC_TELEMETRIA = "uaemex_casa/telemetria";
         const TOPIC_LUCES = "uaemex_casa/actuadores/luces";
         const TOPIC_PUERTA = "uaemex_casa/actuadores/puerta";
         const TOPIC_VENTANAS = "uaemex_casa/actuadores/ventanas";
 
-        // Estado local de la interfaz
         let estadoLuces = [false, false, false, false];
         let estadoPuerta = false;
         let estadoVentanas = false;
 
-        // Conexión MQTT via WebSocket seguro
-        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
+        // Conexión WebSockets seguro hacia HiveMQ Broker
+        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+            clientId: 'WebPanel_' + Math.random().toString(16).substr(2, 8),
+            keepalive: 30
+        });
 
         const statusBadge = document.getElementById('mqtt-status');
 
         client.on('connect', () => {
-            statusBadge.innerText = "Conectado al Broker MQTT";
+            statusBadge.innerText = "● Conectado a Wokwi (MQTT en vivo)";
             statusBadge.style.backgroundColor = "#22c55e";
             client.subscribe(TOPIC_TELEMETRIA);
+        });
+
+        client.on('error', (err) => {
+            console.error("Error MQTT: ", err);
+            statusBadge.innerText = "Error de conexión MQTT";
+            statusBadge.style.backgroundColor = "#ef4444";
         });
 
         client.on('offline', () => {
@@ -299,21 +289,21 @@
             statusBadge.style.backgroundColor = "#ef4444";
         });
 
-        // Recepción de mensajes (Telemetría desde Wokwi)
+        // Recepción y actualización en tiempo real desde Wokwi
         client.on('message', (topic, message) => {
             if (topic === TOPIC_TELEMETRIA) {
                 try {
                     const data = JSON.parse(message.toString());
 
-                    // Actualizar Temperatura y Humedad
+                    // 1. Valores DHT
                     document.getElementById('val-temp').innerText = `${data.temperatura.toFixed(1)} °C`;
                     document.getElementById('val-hum').innerText = `${data.humedad.toFixed(1)} %`;
 
-                    // Actualizar Nivel del Tinaco
+                    // 2. Nivel Tinaco (Potenciómetro)
                     document.getElementById('val-tinaco').innerText = `${data.nivel_tinaco}%`;
                     document.getElementById('bar-tinaco').style.width = `${data.nivel_tinaco}%`;
 
-                    // Actualizar Estado Lluvia
+                    // 3. Sensor Lluvia
                     const elemLluvia = document.getElementById('val-lluvia');
                     if (data.lluvia) {
                         elemLluvia.innerText = "¡Lloviendo!";
@@ -323,13 +313,14 @@
                         elemLluvia.style.color = "#22c55e";
                     }
 
-                    // Sincronizar estados locales recibidos
+                    // 4. Servos (Puerta / Ventanas)
                     estadoPuerta = data.puerta_abierta;
                     actualizarBotonPuerta();
 
                     estadoVentanas = data.ventanas_abiertas;
                     actualizarBotonVentanas();
 
+                    // 5. Estado LEDs
                     if (data.luces) {
                         estadoLuces[0] = data.luces.c1;
                         estadoLuces[1] = data.luces.c2;
@@ -339,12 +330,12 @@
                     }
 
                 } catch (e) {
-                    console.error("Error al procesar JSON telemetría:", e);
+                    console.error("Error procesando JSON de Wokwi:", e);
                 }
             }
         });
 
-        // Funciones de Envío
+        // Comandos hacia Wokwi
         function toggleLuz(cuarto) {
             const nuevoEstado = !estadoLuces[cuarto - 1];
             const payload = JSON.stringify({ cuarto: cuarto, estado: nuevoEstado });
@@ -363,7 +354,6 @@
             client.publish(TOPIC_VENTANAS, payload);
         }
 
-        // Actualización UI
         function actualizarBotonesLuces() {
             for (let i = 1; i <= 4; i++) {
                 const btn = document.getElementById(`btn-c${i}`);
