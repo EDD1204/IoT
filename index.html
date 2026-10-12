@@ -1,20 +1,21 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador Interfaz IoT</title>
+    <title>Panel de Control Domótico IoT - UAEMex</title>
+    <!-- Librería MQTT via WebSocket -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
     <style>
-        /* Estilos generales de la página */
-        body { 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            text-align: center; 
-            margin: 0; 
-            background-color: #f4f4f9; 
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 0;
+            background-color: #f4f4f9;
             padding-bottom: 40px;
         }
 
-        /* Barra superior con títulos centrados */
         header {
             background-color: #1e293b;
             color: white;
@@ -26,145 +27,244 @@
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        header h1 { 
-            margin: 0; 
-            font-size: 22px; 
-            color: #ffffff; 
+        header h1 {
+            margin: 0;
+            font-size: 22px;
+            color: #ffffff;
         }
 
-        header h2 { 
-            margin: 5px 0 0 0; 
-            font-size: 14px; 
-            color: #94a3b8; 
+        header h2 {
+            margin: 5px 0 0 0;
+            font-size: 14px;
+            color: #94a3b8;
             font-weight: normal;
         }
 
-        /* Contenedor principal: columnas con espacio */
+        .connection-badge {
+            margin-top: 10px;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            background-color: #f59e0b;
+            color: white;
+        }
+
         .main-layout {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
             align-items: flex-start;
-            gap: 40px;
-            max-width: 800px;
+            gap: 30px;
+            max-width: 1000px;
             margin: 30px auto 0 auto;
             padding: 0 20px;
         }
 
         .controls-container {
-            flex: 0 1 300px;
+            flex: 1 1 600px;
         }
 
-        /* Botones modernos y proporcionados */
-        .button { 
-            background-color: #3b82f6; 
-            border: none; 
-            color: white; 
-            padding: 14px 25px; 
-            font-size: 16px; 
+        .card {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            text-align: left;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            font-size: 16px;
+            color: #1e293b;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 8px;
+        }
+
+        .grid-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .button {
+            background-color: #3b82f6;
+            border: none;
+            color: white;
+            padding: 12px 15px;
+            font-size: 14px;
             font-weight: bold;
-            margin: 8px; 
-            cursor: pointer; 
-            border-radius: 30px; 
-            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+            cursor: pointer;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
             transition: all 0.2s ease;
+            text-align: center;
         }
 
         .button:hover {
-            transform: scale(1.03);
+            transform: translateY(-2px);
             background-color: #2563eb;
         }
 
-        /* Estilo cuando está apagado / botón secundario */
-        .button2 { 
-            background-color: #64748b; 
-            box-shadow: 0 4px 10px rgba(100, 116, 139, 0.3);
+        .button-off {
+            background-color: #64748b;
+            box-shadow: 0 4px 10px rgba(100, 116, 139, 0.2);
         }
 
-        .button2:hover {
+        .button-off:hover {
             background-color: #475569;
         }
 
-        .status { 
-            font-weight: bold; 
-            font-size: 18px; 
+        .button-danger {
+            background-color: #ef4444;
         }
 
-        /* Tarjetas de botones más pequeñas */
-        .card {
-            background: white;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 15px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        .button-danger:hover {
+            background-color: #dc2626;
         }
 
-        .card p {
-            margin: 5px 0 10px 0;
-            font-size: 15px;
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            text-align: center;
         }
 
-        /* Cuadro para los integrantes a la derecha */
+        .status-box {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .status-val {
+            font-size: 20px;
+            font-weight: bold;
+            color: #0f172a;
+            margin-top: 5px;
+        }
+
+        /* Barra de progreso para el tinaco */
+        .progress-bar-bg {
+            background-color: #e2e8f0;
+            border-radius: 10px;
+            height: 20px;
+            width: 100%;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-bar-fill {
+            background-color: #0284c7;
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
         .team-card {
             background: white;
-            padding: 15px;
-            width: 220px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            border-left: 4px solid #3b82f6;
+            padding: 20px;
+            flex: 0 1 250px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid #3b82f6;
             text-align: left;
         }
 
         .team-card h3 {
-            margin: 0 0 8px 0;
-            font-size: 13px;
+            margin: 0 0 10px 0;
+            font-size: 14px;
             color: #1e293b;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         .team-card ul {
             margin: 0;
             padding-left: 15px;
             color: #475569;
-            font-size: 12px;
+            font-size: 13px;
         }
 
         .team-card li {
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
     </style>
 </head>
+
 <body>
 
-    <!-- Barra Superior Centrada -->
+    <!-- Header -->
     <header>
-        <h1>Interacción Hombre-Máquina</h1>
-        <h2>Simulador Panel IoT (Sin ESP8266)</h2>
+        <h1>Panel de Control IoT - UAEMex</h1>
+        <h2>Simulación Wokwi ESP32 (MQTT HiveMQ)</h2>
+        <div id="mqtt-status" class="connection-badge">Conectando a Broker MQTT...</div>
     </header>
 
-    <!-- Estructura Principal en Columnas -->
     <div class="main-layout">
-        
-        <!-- Controles de los Pines (Columna Izquierda) -->
+
+        <!-- Panel de Control Principal -->
         <div class="controls-container">
+
+            <!-- Telemetría en Tiempo Real -->
             <div class="card">
-                <p>GPIO 5 - Estado: <span id="status5" class="status" style="color: #ef4444;">OFF</span></p>
-                <button id="btn5" class="button" onclick="togglePin(5)">ENCENDER</button>
+                <h3> Sensores & Telemetría</h3>
+                <div class="status-grid">
+                    <div class="status-box">
+                        <small>Temperatura</small>
+                        <div id="val-temp" class="status-val">-- °C</div>
+                    </div>
+                    <div class="status-box">
+                        <small>Humedad</small>
+                        <div id="val-hum" class="status-val">-- %</div>
+                    </div>
+                    <div class="status-box">
+                        <small>Estado Lluvia</small>
+                        <div id="val-lluvia" class="status-val" style="color: #22c55e;">Seco</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <small><strong>Nivel del Tinaco (Potenciómetro):</strong></small>
+                        <small id="val-tinaco">0%</small>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div id="bar-tinaco" class="progress-bar-fill"></div>
+                    </div>
+                </div>
             </div>
 
+            <!-- Control de Iluminación -->
             <div class="card">
-                <p>GPIO 4 - Estado: <span id="status4" class="status" style="color: #ef4444;">OFF</span></p>
-                <button id="btn4" class="button" onclick="togglePin(4)">ENCENDER</button>
+                <h3> Control de Iluminación (LEDs)</h3>
+                <div class="grid-buttons">
+                    <button id="btn-c1" class="button button-off" onclick="toggleLuz(1)">Cuarto 1: OFF</button>
+                    <button id="btn-c2" class="button button-off" onclick="toggleLuz(2)">Cuarto 2: OFF</button>
+                    <button id="btn-c3" class="button button-off" onclick="toggleLuz(3)">Cuarto 3: OFF</button>
+                    <button id="btn-c4" class="button button-off" onclick="toggleLuz(4)">Cuarto 4: OFF</button>
+                </div>
             </div>
+
+            <!-- Control de Accesos y Ventanas (Servomotores) -->
+            <div class="card">
+                <h3> Control de Acceso y Ventanas (Servos)</h3>
+                <div class="grid-buttons">
+                    <button id="btn-puerta" class="button button-off" onclick="togglePuerta()">Puerta: CERRADA</button>
+                    <button id="btn-ventanas" class="button button-off" onclick="toggleVentanas()">Ventanas:
+                        CERRADAS</button>
+                </div>
+            </div>
+
         </div>
 
-        <!-- Cuadro independiente para los integrantes (Columna Derecha) -->
+        <!-- Integrantes del Equipo -->
         <div class="team-card">
             <h3>Integrantes:</h3>
             <ul>
                 <li><strong>Arcos Gómez Eduardo</strong></li>
-                <li><strong>Núñes de los Santos Yael Alejandro</strong></li>
+                <li><strong>Núñez de los Santos Yael Alejandro</strong></li>
                 <li><strong>Tovar Espinoza Fernando de Jesus</strong></li>
             </ul>
         </div>
@@ -172,26 +272,131 @@
     </div>
 
     <script>
-        let states = { 5: false, 4: false };
+        // Tópicos MQTT
+        const TOPIC_TELEMETRIA = "uaemex_casa/telemetria";
+        const TOPIC_LUCES = "uaemex_casa/actuadores/luces";
+        const TOPIC_PUERTA = "uaemex_casa/actuadores/puerta";
+        const TOPIC_VENTANAS = "uaemex_casa/actuadores/ventanas";
 
-        function togglePin(pin) {
-            states[pin] = !states[pin];
-            let statusSpan = document.getElementById(`status${pin}`);
-            let btn = document.getElementById(`btn${pin}`);
+        // Estado local de la interfaz
+        let estadoLuces = [false, false, false, false];
+        let estadoPuerta = false;
+        let estadoVentanas = false;
 
-            if (states[pin]) {
-                statusSpan.innerText = "ON";
-                statusSpan.style.color = "#22c55e";
-                btn.innerText = "APAGAR"; // Sin número al lado
-                btn.classList.add("button2");
-            } else {
-                statusSpan.innerText = "OFF";
-                statusSpan.style.color = "#ef4444";
-                btn.innerText = "ENCENDER"; // Sin número al lado
-                btn.classList.remove("button2");
+        // Conexión MQTT via WebSocket seguro
+        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
+
+        const statusBadge = document.getElementById('mqtt-status');
+
+        client.on('connect', () => {
+            statusBadge.innerText = "Conectado al Broker MQTT";
+            statusBadge.style.backgroundColor = "#22c55e";
+            client.subscribe(TOPIC_TELEMETRIA);
+        });
+
+        client.on('offline', () => {
+            statusBadge.innerText = "Desconectado del Broker";
+            statusBadge.style.backgroundColor = "#ef4444";
+        });
+
+        // Recepción de mensajes (Telemetría desde Wokwi)
+        client.on('message', (topic, message) => {
+            if (topic === TOPIC_TELEMETRIA) {
+                try {
+                    const data = JSON.parse(message.toString());
+
+                    // Actualizar Temperatura y Humedad
+                    document.getElementById('val-temp').innerText = `${data.temperatura.toFixed(1)} °C`;
+                    document.getElementById('val-hum').innerText = `${data.humedad.toFixed(1)} %`;
+
+                    // Actualizar Nivel del Tinaco
+                    document.getElementById('val-tinaco').innerText = `${data.nivel_tinaco}%`;
+                    document.getElementById('bar-tinaco').style.width = `${data.nivel_tinaco}%`;
+
+                    // Actualizar Estado Lluvia
+                    const elemLluvia = document.getElementById('val-lluvia');
+                    if (data.lluvia) {
+                        elemLluvia.innerText = "¡Lloviendo!";
+                        elemLluvia.style.color = "#ef4444";
+                    } else {
+                        elemLluvia.innerText = "Seco";
+                        elemLluvia.style.color = "#22c55e";
+                    }
+
+                    // Sincronizar estados locales recibidos
+                    estadoPuerta = data.puerta_abierta;
+                    actualizarBotonPuerta();
+
+                    estadoVentanas = data.ventanas_abiertas;
+                    actualizarBotonVentanas();
+
+                    if (data.luces) {
+                        estadoLuces[0] = data.luces.c1;
+                        estadoLuces[1] = data.luces.c2;
+                        estadoLuces[2] = data.luces.c3;
+                        estadoLuces[3] = data.luces.c4;
+                        actualizarBotonesLuces();
+                    }
+
+                } catch (e) {
+                    console.error("Error al procesar JSON telemetría:", e);
+                }
             }
-            console.log(`Pin ${pin} cambiado a: ${states[pin] ? 'HIGH' : 'LOW'}`);
+        });
+
+        // Funciones de Envío
+        function toggleLuz(cuarto) {
+            const nuevoEstado = !estadoLuces[cuarto - 1];
+            const payload = JSON.stringify({ cuarto: cuarto, estado: nuevoEstado });
+            client.publish(TOPIC_LUCES, payload);
+        }
+
+        function togglePuerta() {
+            const nuevoEstado = !estadoPuerta;
+            const payload = JSON.stringify({ abrir: nuevoEstado });
+            client.publish(TOPIC_PUERTA, payload);
+        }
+
+        function toggleVentanas() {
+            const nuevoEstado = !estadoVentanas;
+            const payload = JSON.stringify({ abrir: nuevoEstado });
+            client.publish(TOPIC_VENTANAS, payload);
+        }
+
+        // Actualización UI
+        function actualizarBotonesLuces() {
+            for (let i = 1; i <= 4; i++) {
+                const btn = document.getElementById(`btn-c${i}`);
+                const encendido = estadoLuces[i - 1];
+                btn.innerText = `Cuarto ${i}: ${encendido ? 'ON' : 'OFF'}`;
+                if (encendido) {
+                    btn.classList.remove('button-off');
+                } else {
+                    btn.classList.add('button-off');
+                }
+            }
+        }
+
+        function actualizarBotonPuerta() {
+            const btn = document.getElementById('btn-puerta');
+            btn.innerText = `Puerta: ${estadoPuerta ? 'ABIERTA' : 'CERRADA'}`;
+            if (estadoPuerta) {
+                btn.classList.remove('button-off');
+            } else {
+                btn.classList.add('button-off');
+            }
+        }
+
+        function actualizarBotonVentanas() {
+            const btn = document.getElementById('btn-ventanas');
+            btn.innerText = `Ventanas: ${estadoVentanas ? 'ABIERTAS' : 'CERRADAS'}`;
+            if (estadoVentanas) {
+                btn.classList.remove('button-off');
+            } else {
+                btn.classList.add('button-off');
+            }
         }
     </script>
 </body>
+
 </html>
