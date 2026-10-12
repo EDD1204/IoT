@@ -1,0 +1,28 @@
+{
+  "name": "iot---ihm",
+  "version": "1.0.0",
+  "description": "Panel web interactivo de control domótico y telemetría en tiempo real conectado mediante protocolo MQTT (vía WebSockets con HiveMQ) para simulación con ESP32 / Wokwi.",
+  "main": "index.js",
+  "scripts": {
+    "sync": "cp -r index.html css js manifest.json sw.js icon-192.png icon-512.png www/ && npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:build": "npm run sync && cd android && ./gradlew assembleDebug",
+    "serve": "python3 -m http.server 8080",
+    "tunnel": "npx -y localtunnel --port 8080"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EDD1204/IoT.git"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/EDD1204/IoT/issues"
+  },
+  "homepage": "https://github.com/EDD1204/IoT#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3"
+  }
+}

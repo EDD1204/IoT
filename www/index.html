@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#090b10">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="DomótiX">
+    <meta name="description" content="DomótiX UAEMex - Panel de control domótico y telemetría en tiempo real bajo patrón MVC">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <title>DomótiX UAEMex — Smart Living & IoT Telemetry</title>
+
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Estilos Modulares y Adaptabilidad Total -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/floorplan.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/responsive.css">
+
+    <!-- Tecnologías de Frontend y Red (Offline-first & Alta Disponibilidad) -->
+    <script src="js/vendor/mqtt.min.js"></script>
+    <script src="js/vendor/react.production.min.js"></script>
+    <script src="js/vendor/react-dom.production.min.js"></script>
+    <script src="js/vendor/htm.umd.js"></script>
+</head>
+
+<body>
+
+    <!-- ==========================================
+         HEADER / BARRA SUPERIOR
+         ========================================== -->
+    <header class="app-header">
+        <div class="brand-group">
+            <div class="brand-monogram" aria-hidden="true">D</div>
+            <div class="brand-details">
+                <h1>
+                    DomótiX
+                    <span class="brand-badge">UAEMex</span>
+                </h1>
+                <p id="broker-label">Red Local DomótiX • ESP32 Autónomo</p>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <!-- Botón PWA Install -->
+            <button id="btn-install-pwa" class="btn-install-pwa" aria-label="Instalar como aplicación">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                <span>Instalar App</span>
+            </button>
+
+            <!-- Badge de Conexión y Latencia RTT -->
+            <div class="connection-indicator" role="status" aria-live="polite">
+                <div id="conn-dot" class="status-dot"></div>
+                <span id="conn-text">Conectando...</span>
+                <span id="conn-ping-pill" class="ping-latency-pill" style="display: none;">--ms</span>
+            </div>
+
+            <!-- Botón Asistente de Voz Manos Libres -->
+            <button id="btn-voice" class="action-icon-btn" title="Control por Voz en Español" aria-label="Activar asistente de voz">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="22"/>
+                </svg>
+            </button>
+
+            <!-- Botón Sonidos Acústicos -->
+            <button id="btn-audio" class="action-icon-btn active" title="Sonido acústico táctil" aria-label="Alternar retroalimentación auditiva">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                </svg>
+            </button>
+
+            <!-- Botón Modo Simulación Demo -->
+            <button id="btn-demo" class="action-icon-btn" title="Modo Simulación Demo" aria-label="Alternar modo simulación demo">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+            </button>
+
+            <!-- Ajustes de Broker MQTT -->
+            <button id="btn-open-settings" class="action-icon-btn" title="Configuración de Red" aria-label="Abrir ajustes de red">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- NAVEGACIÓN SEGMENTADA EN ESCRITORIO -->
+    <div class="tabs-wrapper">
+        <div class="segmented-control" role="tablist" aria-label="Secciones de la aplicación">
+            <button class="segment-btn active" data-tab="home" role="tab" aria-selected="true">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                Plano & Mandos
+            </button>
+            <button class="segment-btn" data-tab="analytics" role="tab" aria-selected="false">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                Telemetría & Auditoría
+            </button>
+            <button class="segment-btn" data-tab="system" role="tab" aria-selected="false">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                Arquitectura ESP32
+            </button>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         VIEWPORT PRINCIPAL
+         ========================================== -->
+    <main class="main-viewport">
+
+        <!-- BANNER DE ALTA DISPONIBILIDAD (MODO SIN CONEXIÓN) -->
+        <div id="offline-banner" class="offline-network-banner" role="status">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="1" y1="1" x2="23" y2="23"/>
+                <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+                <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+                <path d="M10.71 5.05A16 16 0 0 1 22.58 9"/>
+                <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+                <line x1="12" y1="20" x2="12.01" y2="20"/>
+            </svg>
+            <div>
+                <strong>Modo Autónomo Local (Sin Conexión)</strong>
+                <p>Las acciones continuarán ejecutándose localmente y se almacenarán en la cola para sincronización automática con el ESP32.</p>
+            </div>
+        </div>
+
+        <!-- ALERTA DISCRETA DE LLUVIA -->
+        <div id="rain-pill" class="rain-notice-pill" role="alert">
+            <div class="left">
+                <span class="rain-tag">Lluvia Activa</span>
+                <span>Precipitación detectada (GPIO 32). El ESP32 ha asegurado las 3 ventanas para evitar filtraciones.</span>
+            </div>
+            <span class="subtle-badge">Seguridad Activada</span>
+        </div>
+
+        <!-- ==========================================================
+             PANEL 1: PLANO ARQUITECTÓNICO & CENTRO DE CONTROL
+             ========================================================== -->
+        <section id="panel-home" class="tab-panel active" role="tabpanel">
+            <div class="layout-grid">
+
+                <!-- COLUMNA IZQUIERDA: PLANO ARQUITECTÓNICO 2D -->
+                <div class="card-surface">
+                    <div class="card-title-row">
+                        <h2>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 12h18"/><path d="M12 3v18"/></svg>
+                            Plano Arquitectónico Didáctico
+                        </h2>
+                        <span id="sky-label" class="weather-sky-indicator">
+                            <span id="sky-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #10b981;"></span>
+                            Ambiente Seco
+                        </span>
+                    </div>
+
+                    <div class="blueprint-card">
+                        <!-- Capa de Lluvia Sutil -->
+                        <div id="rain-layer" class="subtle-rain-layer" aria-hidden="true"></div>
+
+                        <!-- SVG Arquitectura Minimalista -->
+                        <svg viewBox="0 0 520 440" width="100%" height="auto" id="floorplan-svg" role="img" aria-label="Plano de la casa inteligente">
+                            <defs>
+                                <radialGradient id="light-grad-warm" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stop-color="#d97706" stop-opacity="0.32" />
+                                    <stop offset="60%" stop-color="#d97706" stop-opacity="0.12" />
+                                    <stop offset="100%" stop-color="#141824" stop-opacity="0" />
+                                </radialGradient>
+                                <radialGradient id="light-grad-cool" cx="50%" cy="50%" r="50%">
+                                    <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.32" />
+                                    <stop offset="60%" stop-color="#0284c7" stop-opacity="0.12" />
+                                    <stop offset="100%" stop-color="#141824" stop-opacity="0" />
+                                </radialGradient>
+                            </defs>
+
+                            <!-- Muros Perimetrales Exteriores -->
+                            <rect x="24" y="24" width="472" height="392" rx="16" fill="#0c0e14" stroke="#1f2536" stroke-width="2.5" />
+
+                            <!-- CUARTO 1: Recámara Principal (GPIO 18) -->
+                            <g id="svg-room-1" class="room-sector" tabindex="0" role="button" aria-label="Recámara Principal, GPIO 18">
+                                <rect id="svg-rect-1" x="36" y="36" width="218" height="174" rx="10" fill="#11141e" stroke="#22283b" stroke-width="1.5" />
+                                <circle id="svg-lightpool-1" cx="145" cy="123" r="70" fill="url(#light-grad-warm)" opacity="0" style="transition: opacity 0.45s ease;" />
+                                <!-- Mobiliario Recámara -->
+                                <rect x="52" y="52" width="50" height="70" rx="4" fill="#171c2b" stroke="#262d42" stroke-width="1" />
+                                <rect x="56" y="56" width="42" height="18" rx="2" fill="#20273b" />
+                                <text x="145" y="85" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">01 Recámara</text>
+                                <text x="145" y="103" fill="#64748b" font-size="10" font-weight="500" text-anchor="middle">Luz Cálida • GPIO 18</text>
+                                <circle id="svg-bulb-1" cx="145" cy="123" r="7" fill="#262d42" stroke="#3b445f" stroke-width="1.5" />
+                            </g>
+
+                            <!-- CUARTO 2: Estudio / Oficina (GPIO 19) -->
+                            <g id="svg-room-2" class="room-sector" tabindex="0" role="button" aria-label="Estudio u Oficina, GPIO 19">
+                                <rect id="svg-rect-2" x="266" y="36" width="218" height="174" rx="10" fill="#11141e" stroke="#22283b" stroke-width="1.5" />
+                                <circle id="svg-lightpool-2" cx="375" cy="123" r="70" fill="url(#light-grad-cool)" opacity="0" style="transition: opacity 0.45s ease;" />
+                                <!-- Mobiliario Escritorio -->
+                                <rect x="408" y="52" width="62" height="34" rx="3" fill="#171c2b" stroke="#262d42" stroke-width="1" />
+                                <text x="375" y="85" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">02 Estudio</text>
+                                <text x="375" y="103" fill="#64748b" font-size="10" font-weight="500" text-anchor="middle">Luz Fría • GPIO 19</text>
+                                <circle id="svg-bulb-2" cx="375" cy="123" r="7" fill="#262d42" stroke="#3b445f" stroke-width="1.5" />
+                            </g>
+
+                            <!-- CUARTO 3: Cocina y Comedor (GPIO 21) -->
+                            <g id="svg-room-3" class="room-sector" tabindex="0" role="button" aria-label="Cocina y Comedor, GPIO 21">
+                                <rect id="svg-rect-3" x="36" y="222" width="218" height="182" rx="10" fill="#11141e" stroke="#22283b" stroke-width="1.5" />
+                                <circle id="svg-lightpool-3" cx="145" cy="313" r="70" fill="url(#light-grad-cool)" opacity="0" style="transition: opacity 0.45s ease;" />
+                                <!-- Mesa Comedor Redonda -->
+                                <circle cx="75" cy="313" r="22" fill="#171c2b" stroke="#262d42" stroke-width="1" />
+                                <text x="145" y="275" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">03 Cocina</text>
+                                <text x="145" y="293" fill="#64748b" font-size="10" font-weight="500" text-anchor="middle">Luz Fría • GPIO 21</text>
+                                <circle id="svg-bulb-3" cx="145" cy="313" r="7" fill="#262d42" stroke="#3b445f" stroke-width="1.5" />
+                            </g>
+
+                            <!-- CUARTO 4: Sala de Estar (GPIO 22) -->
+                            <g id="svg-room-4" class="room-sector" tabindex="0" role="button" aria-label="Sala de Estar, GPIO 22">
+                                <rect id="svg-rect-4" x="266" y="222" width="218" height="182" rx="10" fill="#11141e" stroke="#22283b" stroke-width="1.5" />
+                                <circle id="svg-lightpool-4" cx="375" cy="313" r="70" fill="url(#light-grad-warm)" opacity="0" style="transition: opacity 0.45s ease;" />
+                                <!-- Sofá -->
+                                <rect x="390" y="300" width="80" height="36" rx="5" fill="#171c2b" stroke="#262d42" stroke-width="1" />
+                                <text x="375" y="275" fill="#f8fafc" font-size="13" font-weight="700" text-anchor="middle">04 Sala</text>
+                                <text x="375" y="293" fill="#64748b" font-size="10" font-weight="500" text-anchor="middle">Luz Cálida • GPIO 22</text>
+                                <circle id="svg-bulb-4" cx="375" cy="313" r="7" fill="#262d42" stroke="#3b445f" stroke-width="1.5" />
+                            </g>
+
+                            <!-- VENTANA 1 (V1 - GPIO 13) -->
+                            <g id="svg-v1" class="actuator-interactive" tabindex="0" role="button" aria-label="Ventana 1, GPIO 13">
+                                <rect x="95" y="22" width="70" height="6" rx="2" fill="#1e2436" stroke="#2b344d" stroke-width="1"/>
+                                <line id="svg-v1-slat" x1="100" y1="25" x2="160" y2="25" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+                                <text x="130" y="15" fill="#64748b" font-family="'JetBrains Mono', monospace" font-size="8" text-anchor="middle">V1 (13)</text>
+                            </g>
+
+                            <!-- VENTANA 2 (V2 - GPIO 25) -->
+                            <g id="svg-v2" class="actuator-interactive" tabindex="0" role="button" aria-label="Ventana 2, GPIO 25">
+                                <rect x="355" y="22" width="70" height="6" rx="2" fill="#1e2436" stroke="#2b344d" stroke-width="1"/>
+                                <line id="svg-v2-slat" x1="360" y1="25" x2="420" y2="25" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+                                <text x="390" y="15" fill="#64748b" font-family="'JetBrains Mono', monospace" font-size="8" text-anchor="middle">V2 (25)</text>
+                            </g>
+
+                            <!-- VENTANA 3 (V3 - GPIO 26) -->
+                            <g id="svg-v3" class="actuator-interactive" tabindex="0" role="button" aria-label="Ventana 3, GPIO 26">
+                                <rect x="492" y="278" width="6" height="70" rx="2" fill="#1e2436" stroke="#2b344d" stroke-width="1"/>
+                                <line id="svg-v3-slat" x1="495" y1="283" x2="495" y2="343" stroke="#ef4444" stroke-width="3" stroke-linecap="round"/>
+                                <text x="509" y="318" fill="#64748b" font-family="'JetBrains Mono', monospace" font-size="8" text-anchor="middle">V3</text>
+                            </g>
+
+                            <!-- PUERTA PRINCIPAL (SERVO - GPIO 27) -->
+                            <g id="svg-door" class="actuator-interactive" tabindex="0" role="button" aria-label="Puerta Principal, GPIO 27">
+                                <rect x="235" y="412" width="50" height="6" rx="2" fill="#1e2436" />
+                                <line id="svg-door-bar" x1="240" y1="415" x2="280" y2="415" stroke="#ef4444" stroke-width="4" stroke-linecap="round"/>
+                                <path id="svg-door-path" d="M 280 415 A 40 40 0 0 0 280 375" fill="none" stroke="#3b445f" stroke-width="1" stroke-dasharray="2,2"/>
+                                <text id="svg-door-status-text" x="260" y="432" fill="#94a3b8" font-family="'JetBrains Mono', monospace" font-size="9" text-anchor="middle">PUERTA 0° (27)</text>
+                            </g>
+
+                            <!-- TINACO DE AGUA EN AZOTEA (HW-038 - GPIO 34) -->
+                            <g id="svg-tinaco-hub" style="cursor: pointer;" tabindex="0" role="button" aria-label="Tinaco de Agua, GPIO 34">
+                                <circle cx="260" cy="205" r="26" fill="#141824" stroke="#0284c7" stroke-width="2" />
+                                <circle id="svg-tinaco-core" cx="260" cy="205" r="16" fill="rgba(56, 189, 248, 0.3)" />
+                                <text x="260" y="202" fill="#7dd3fc" font-size="9" font-weight="700" text-anchor="middle">TINACO</text>
+                                <text id="svg-tinaco-txt" x="260" y="214" fill="#ffffff" font-family="'JetBrains Mono', monospace" font-size="8" font-weight="700" text-anchor="middle">0%</text>
+                            </g>
+                        </svg>
+
+                        <div class="blueprint-footer-guide">
+                            <span><span class="guide-dot" style="background: var(--accent-warm);"></span>Luz Cálida (C1, C4)</span>
+                            <span><span class="guide-dot" style="background: var(--accent-cool-soft);"></span>Luz Fría (C2, C3)</span>
+                            <span><span class="guide-dot" style="background: var(--status-green);"></span>Actuador Abierto</span>
+                            <span><span class="guide-dot" style="background: var(--status-rose);"></span>Actuador Cerrado</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COLUMNA DERECHA: SENSORES Y MANDOS DE PRECISIÓN -->
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+
+                    <!-- MÉTRICAS EN TIEMPO REAL -->
+                    <div class="card-surface">
+                        <div class="card-title-row">
+                            <h2>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+                                Métricas Ambientales
+                            </h2>
+                            <span class="subtle-badge" id="last-ping-badge">Wokwi ESP32</span>
+                        </div>
+
+                        <!-- 3 Celdas de Métricas -->
+                        <div class="metrics-row">
+                            <div class="metric-cell">
+                                <div class="metric-header">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
+                                    Temperatura
+                                </div>
+                                <div id="temp-val" class="metric-value">-- °C</div>
+                                <div class="metric-foot">DHT22 • GPIO 04</div>
+                            </div>
+
+                            <div class="metric-cell">
+                                <div class="metric-header">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                                    Humedad
+                                </div>
+                                <div id="hum-val" class="metric-value">-- %</div>
+                                <div class="metric-foot">Humedad Relativa</div>
+                            </div>
+
+                            <div class="metric-cell">
+                                <div class="metric-header">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 16.2A4.5 4.5 0 0 0 17.5 8h-1.8A7 7 0 1 0 4 14.9"/></svg>
+                                    Lluvia
+                                </div>
+                                <div id="rain-val" class="metric-value" style="color: var(--status-green);">Seco</div>
+                                <div class="metric-foot">GPIO 32 Pull-up</div>
+                            </div>
+                        </div>
+
+                        <!-- Columna Graduada del Tinaco (HW-038) -->
+                        <div class="tinaco-gauge-panel">
+                            <div class="tinaco-gauge-header">
+                                <div>
+                                    <strong style="font-size: 0.86rem; color: var(--text-primary);">Nivel del Tinaco</strong>
+                                    <p style="font-size: 0.72rem; color: var(--text-secondary);">Potenciómetro analógico • GPIO 34 (ADC1)</p>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span id="tinaco-pct-txt" style="font-size: 1.15rem; font-weight: 700; color: #38bdf8;">0%</span>
+                                    <div id="tinaco-liters-txt" style="font-size: 0.72rem; color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace;">0 / 1100 L</div>
+                                </div>
+                            </div>
+                            <div class="tinaco-track">
+                                <div id="tinaco-fluid-bar" class="tinaco-fill-fluid"></div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- MANDO DE ACTUADORES & ESCENAS -->
+                    <div class="card-surface">
+                        <div class="card-title-row">
+                            <h2>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="M2 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M12 22v-4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M22 12h-4"/><path d="m19.07 4.93-2.83 2.83"/></svg>
+                                Actuadores & Iluminación
+                            </h2>
+                            <div class="scenes-cluster">
+                                <button class="scene-btn" data-scene="todas_on">💡 Todas</button>
+                                <button class="scene-btn" data-scene="todas_off">🌑 Apagar</button>
+                                <button class="scene-btn" data-scene="noche">🌙 Noche</button>
+                                <button class="scene-btn" data-scene="salir">🚪 Salir</button>
+                            </div>
+                        </div>
+
+                        <!-- Grid de Switches Tactiles -->
+                        <div class="switches-grid">
+                            <!-- Cuarto 1 -->
+                            <div id="tile-c1" class="tactile-tile warm" role="switch" aria-checked="false" tabindex="0">
+                                <div class="tile-top">
+                                    <div class="tile-icon-bubble">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                                    </div>
+                                    <div class="toggle-pill-housing">
+                                        <div class="toggle-knob"></div>
+                                    </div>
+                                </div>
+                                <div class="tile-bottom">
+                                    <div class="tile-title">Cuarto 1</div>
+                                    <div id="status-c1" class="tile-subtitle">Off • GPIO 18</div>
+                                </div>
+                            </div>
+
+                            <!-- Cuarto 2 -->
+                            <div id="tile-c2" class="tactile-tile cool" role="switch" aria-checked="false" tabindex="0">
+                                <div class="tile-top">
+                                    <div class="tile-icon-bubble">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                                    </div>
+                                    <div class="toggle-pill-housing">
+                                        <div class="toggle-knob"></div>
+                                    </div>
+                                </div>
+                                <div class="tile-bottom">
+                                    <div class="tile-title">Cuarto 2</div>
+                                    <div id="status-c2" class="tile-subtitle">Off • GPIO 19</div>
+                                </div>
+                            </div>
+
+                            <!-- Cuarto 3 -->
+                            <div id="tile-c3" class="tactile-tile cool" role="switch" aria-checked="false" tabindex="0">
+                                <div class="tile-top">
+                                    <div class="tile-icon-bubble">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                                    </div>
+                                    <div class="toggle-pill-housing">
+                                        <div class="toggle-knob"></div>
+                                    </div>
+                                </div>
+                                <div class="tile-bottom">
+                                    <div class="tile-title">Cuarto 3</div>
+                                    <div id="status-c3" class="tile-subtitle">Off • GPIO 21</div>
+                                </div>
+                            </div>
+
+                            <!-- Cuarto 4 -->
+                            <div id="tile-c4" class="tactile-tile warm" role="switch" aria-checked="false" tabindex="0">
+                                <div class="tile-top">
+                                    <div class="tile-icon-bubble">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+                                    </div>
+                                    <div class="toggle-pill-housing">
+                                        <div class="toggle-knob"></div>
+                                    </div>
+                                </div>
+                                <div class="tile-bottom">
+                                    <div class="tile-title">Cuarto 4</div>
+                                    <div id="status-c4" class="tile-subtitle">Off • GPIO 22</div>
+                                </div>
+                            </div>
+
+                            <!-- Puerta Principal -->
+                            <div id="tile-door" class="tactile-tile actuator" role="switch" aria-checked="false" tabindex="0">
+                                <div class="tile-top">
+                                    <div class="tile-icon-bubble">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="20" x="5" y="2" rx="2"/><circle cx="10" cy="12" r="1"/></svg>
+                                    </div>
+                                    <div class="toggle-pill-housing">
+                                        <div class="toggle-knob"></div>
+                                    </div>
+                                </div>
+                                <div class="tile-bottom">
+                                    <div class="tile-title">Puerta</div>
+                                    <div id="status-door" class="tile-subtitle">Cerrada • GPIO 27</div>
+                                </div>
+                            </div>
+
+                            <!-- Todas las Ventanas (Control Maestro) -->
+                            <div id="tile-windows" class="tactile-tile actuator" role="switch" aria-checked="false" tabindex="0">
+                                <div class="tile-top">
+                                    <div class="tile-icon-bubble">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h18v18H3z"/><path d="M12 3v18"/><path d="M3 12h18"/></svg>
+                                    </div>
+                                    <div class="toggle-pill-housing">
+                                        <div class="toggle-knob"></div>
+                                    </div>
+                                </div>
+                                <div class="tile-bottom">
+                                    <div class="tile-title">Todas Ventanas</div>
+                                    <div id="status-windows" class="tile-subtitle">Cerradas • GPIO 13,25,26</div>
+                                </div>
+                            </div>
+
+                            <!-- Ventana 1 (Recámara) -->
+                            <div id="tile-w1" class="tactile-tile actuator" role="switch" aria-checked="false" tabindex="0">
+                                <div class="tile-top">
+                                    <div class="tile-icon-bubble">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h18v18H3z"/><path d="M12 3v18"/></svg>
+                                    </div>
+                                    <div class="toggle-pill-housing">
+                                        <div class="toggle-knob"></div>
+                                    </div>
+                                </div>
+                                <div class="tile-bottom">
+                                    <div class="tile-title">Ventana 1</div>
+                                    <div id="status-w1" class="tile-subtitle">Cerrada • GPIO 13</div>
+                                </div>
+                            </div>
+
+                            <!-- Ventana 2 (Estudio) -->
+                            <div id="tile-w2" class="tactile-tile actuator" role="switch" aria-checked="false" tabindex="0">
+                                <div class="tile-top">
+                                    <div class="tile-icon-bubble">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h18v18H3z"/><path d="M12 3v18"/></svg>
+                                    </div>
+                                    <div class="toggle-pill-housing">
+                                        <div class="toggle-knob"></div>
+                                    </div>
+                                </div>
+                                <div class="tile-bottom">
+                                    <div class="tile-title">Ventana 2</div>
+                                    <div id="status-w2" class="tile-subtitle">Cerrada • GPIO 25</div>
+                                </div>
+                            </div>
+
+                            <!-- Ventana 3 (Sala) -->
+                            <div id="tile-w3" class="tactile-tile actuator" role="switch" aria-checked="false" tabindex="0">
+                                <div class="tile-top">
+                                    <div class="tile-icon-bubble">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3h18v18H3z"/><path d="M3 12h18"/></svg>
+                                    </div>
+                                    <div class="toggle-pill-housing">
+                                        <div class="toggle-knob"></div>
+                                    </div>
+                                </div>
+                                <div class="tile-bottom">
+                                    <div class="tile-title">Ventana 3</div>
+                                    <div id="status-w3" class="tile-subtitle">Cerrada • GPIO 26</div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- WIDGET REACT 1: ANALÍTICA DE CONFORT Y RESERVA HÍDRICA -->
+                    <div id="react-comfort-mount"></div>
+
+                    <!-- WIDGET REACT 2: HUB DE AUTOMATIZACIONES INTELIGENTES -->
+                    <div id="react-automations-mount"></div>
+
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- ==========================================================
+             PANEL 2: TELEMETRÍA GRÁFICA & REGISTRO DE AUDITORÍA
+             ========================================================== -->
+        <section id="panel-analytics" class="tab-panel" role="tabpanel">
+            <div class="charts-container">
+
+                <!-- WIDGET REACT 3: DIAGNÓSTICO DE RED, LATENCIA RTT Y BROKER FAILOVER -->
+                <div id="react-network-mount" style="grid-column: 1 / -1;"></div>
+
+                <div class="chart-card">
+                    <div class="card-title-row">
+                        <h2>🌡️ Tendencia Térmica (°C)</h2>
+                        <span class="subtle-badge" id="chart-t-cur">-- °C</span>
+                    </div>
+                    <canvas id="canvas-temp" class="smooth-chart"></canvas>
+                </div>
+
+                <div class="chart-card">
+                    <div class="card-title-row">
+                        <h2>💧 Humedad Ambiente (%)</h2>
+                        <span class="subtle-badge" id="chart-h-cur">-- %</span>
+                    </div>
+                    <canvas id="canvas-hum" class="smooth-chart"></canvas>
+                </div>
+
+                <div class="chart-card">
+                    <div class="card-title-row">
+                        <h2>🚰 Nivel de Tinaco (%)</h2>
+                        <span class="subtle-badge" id="chart-tin-cur">-- %</span>
+                    </div>
+                    <canvas id="canvas-tinaco" class="smooth-chart"></canvas>
+                </div>
+
+                <div class="chart-card">
+                    <div class="card-title-row">
+                        <h2>📜 Registro de Auditoría MQTT</h2>
+                        <div class="audit-actions-cluster">
+                            <select id="audit-filter-select" class="audit-filter-select" aria-label="Filtrar eventos">
+                                <option value="all">Todos</option>
+                                <option value="telemetry">Telemetría</option>
+                                <option value="orders">Órdenes</option>
+                                <option value="alerts">Alertas</option>
+                            </select>
+                            <button id="btn-clear-audit" class="btn-secondary" style="padding: 4px 10px; font-size: 0.72rem;">Limpiar</button>
+                            <button id="btn-export-audit" class="btn-secondary" style="padding: 4px 10px; font-size: 0.72rem;">Exportar JSON</button>
+                        </div>
+                    </div>
+                    <div id="console-stream-box" class="console-stream" role="log" aria-live="polite">
+                        <div class="stream-row">
+                            <span class="time">00:00:00</span>
+                            <span class="tag in">SYS</span>
+                            <span>Inicialización de cliente MQTT en WebSockets seguros...</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- ==========================================================
+             PANEL 3: ARQUITECTURA TÉCNICA ESP32 DEVKIT C V4
+             ========================================================== -->
+        <section id="panel-system" class="tab-panel" role="tabpanel">
+            <div class="card-surface" style="margin-bottom: 24px;">
+                <div class="card-title-row">
+                    <h2>⚙️ Mapeo de Pines y Protocolo IoT</h2>
+                    <span class="subtle-badge">Wokwi ESP32-DevKit-C-v4</span>
+                </div>
+                <p style="color: var(--text-secondary); font-size: 0.84rem; line-height: 1.6; margin-bottom: 20px;">
+                    Integración bidireccional entre hardware embebido simulado y aplicación cliente mediante protocolo <strong>MQTT sobre WebSockets seguros (WSS :8884)</strong>. Las lecturas de sensores son empaquetadas en JSON y los comandos de actuadores cuentan con validaciones de seguridad físicas y por software.
+                </p>
+
+                <div class="pinout-layout">
+                    <div class="pin-item">
+                        <div class="pin-mono-pill">GPIO 04</div>
+                        <div class="pin-desc">
+                            <h4>Sensor Digital DHT22</h4>
+                            <p>Lectura de temperatura ambiente y humedad relativa. Mapeado en tópico <code>uaemex_casa/telemetria</code>.</p>
+                        </div>
+                    </div>
+
+                    <div class="pin-item">
+                        <div class="pin-mono-pill">GPIO 34</div>
+                        <div class="pin-desc">
+                            <h4>Tinaco HW-038 (ADC1)</h4>
+                            <p>Entrada analógica libre de conflicto con WiFi. Rango 0-4095 mapeado a 0-100% de capacidad en litros.</p>
+                        </div>
+                    </div>
+
+                    <div class="pin-item">
+                        <div class="pin-mono-pill">GPIO 32</div>
+                        <div class="pin-desc">
+                            <h4>Detector de Lluvia</h4>
+                            <p>Entrada digital con resistencia interna pull-up. Bloqueo de ventanas automático al pasar a estado LOW.</p>
+                        </div>
+                    </div>
+
+                    <div class="pin-item">
+                        <div class="pin-mono-pill">GPIO 18, 19, 21, 22</div>
+                        <div class="pin-desc">
+                            <h4>LEDs Cuartos 1 a 4</h4>
+                            <p>Salidas digitales con limitación por resistencia 220Ω. Control independiente vía <code>uaemex_casa/actuadores/luces</code>.</p>
+                        </div>
+                    </div>
+
+                    <div class="pin-item">
+                        <div class="pin-mono-pill">GPIO 27</div>
+                        <div class="pin-desc">
+                            <h4>Servomotor Puerta Principal</h4>
+                            <p>Generación PWM a 50 Hz. Rango angular de 0° (bloqueo) a 90° (acceso peatonal).</p>
+                        </div>
+                    </div>
+
+                    <div class="pin-item">
+                        <div class="pin-mono-pill">GPIO 13, 25, 26</div>
+                        <div class="pin-desc">
+                            <h4>Servomotores Ventanas (V1-V3)</h4>
+                            <p>Actuación síncrona con regla de seguridad física ante condiciones meteorológicas adversas.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==========================================
+         FOOTER
+         ========================================== -->
+    <footer class="app-footer">
+        <p><strong>Universidad Autónoma del Estado de México (UAEMex)</strong></p>
+        <p>Facultad de Ingeniería • Cómputo Móvil / IoT & IHM</p>
+        <div class="team-inline">
+            <span>Arcos Gómez Eduardo</span>
+            <span>•</span>
+            <span>Núñez de los Santos Yael Alejandro</span>
+            <span>•</span>
+            <span>Tovar Espinoza Fernando de Jesus</span>
+        </div>
+    </footer>
+
+    <!-- ==========================================
+         BARRA DE NAVEGACIÓN INFERIOR PARA MÓVIL
+         ========================================== -->
+    <nav class="mobile-tab-bar" aria-label="Navegación móvil">
+        <button class="mob-tab-item active" id="mob-btn-home" data-tab="home" aria-label="Plano de la casa">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            <span>Plano</span>
+        </button>
+        <button class="mob-tab-item" id="mob-btn-analytics" data-tab="analytics" aria-label="Telemetría y gráficas">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+            </svg>
+            <span>Telemetría</span>
+        </button>
+        <button class="mob-tab-item" id="mob-btn-system" data-tab="system" aria-label="Arquitectura de hardware">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect width="18" height="18" x="3" y="3" rx="2"/>
+                <path d="M3 9h18"/><path d="M9 21V9"/>
+            </svg>
+            <span>Hardware</span>
+        </button>
+    </nav>
+
+    <!-- ==========================================
+         MODAL DE CONFIGURACIÓN DE BROKER MQTT
+         ========================================== -->
+    <div id="settings-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-title">Configuración de Red y Enlace ESP32</h3>
+                <button id="btn-close-settings" class="action-icon-btn" aria-label="Cerrar modal">✕</button>
+            </div>
+            <div class="form-group">
+                <label>Modos de Conexión y Servidores</label>
+                <div class="broker-presets-grid" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button type="button" class="broker-preset-btn selected" data-url="http://192.168.4.1">🟢 Red Local (192.168.4.1)</button>
+                    <button type="button" class="broker-preset-btn" data-url="wss://broker.hivemq.com:8884/mqtt">🌐 HiveMQ WSS</button>
+                    <button type="button" class="broker-preset-btn" data-url="wss://broker.emqx.io:8084/mqtt">🌐 EMQX Cloud WSS</button>
+                    <button type="button" class="broker-preset-btn" data-url="wss://test.mosquitto.org:8081/mqtt">🌐 Mosquitto WSS</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="cfg-broker-url">Dirección URL / IP del Servidor</label>
+                <input type="text" id="cfg-broker-url" class="form-input" value="http://192.168.4.1">
+                <small style="color: #94a3b8; font-size: 0.8rem; margin-top: 4px; display: block;">
+                    Para operar 100% sin internet conectado a la Wi-Fi <b>Domotix-UAEMex</b>, usa <code>http://192.168.4.1</code>.
+                </small>
+            </div>
+            <div class="form-group">
+                <label for="cfg-topic-prefix">Prefijo de Tópicos (Modo MQTT)</label>
+                <input type="text" id="cfg-topic-prefix" class="form-input" value="uaemex_casa">
+            </div>
+            <div class="modal-buttons">
+                <button id="btn-cancel-settings" class="btn-secondary">Cancelar</button>
+                <button id="btn-save-settings" class="btn-primary">Guardar y Conectar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODAL GUÍA DE INSTALACIÓN EN MÓVIL
+         ========================================== -->
+    <div id="install-guide-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="install-modal-title">
+        <div class="modal-card install-guide-card">
+            <div class="modal-header">
+                <h3 id="install-modal-title">📲 Instalar DomótiX en tu Teléfono</h3>
+                <button id="btn-close-install-guide" class="action-icon-btn" aria-label="Cerrar modal">✕</button>
+            </div>
+            
+            <div class="install-guide-body">
+                <p class="install-guide-lead">
+                    Instala DomótiX directamente en tu pantalla de inicio como una aplicación nativa rápida y sin conexión:
+                </p>
+
+                <!-- Guía Android -->
+                <div class="install-platform-box">
+                    <div class="install-platform-header">
+                        <span class="platform-badge">Android</span>
+                        <strong>Google Chrome / Brave / Edge</strong>
+                    </div>
+                    <ol class="install-steps-list">
+                        <li>Toca el menú de <strong>tres puntos (⋮)</strong> en la barra superior del navegador.</li>
+                        <li>Selecciona <strong>"Instalar aplicación"</strong> o <strong>"Agregar a la pantalla principal"</strong>.</li>
+                        <li>Confirma en <strong>"Instalar"</strong>. La app aparecerá en tu cajón de aplicaciones con icono propio y pantalla completa.</li>
+                    </ol>
+                </div>
+
+                <!-- Guía iOS -->
+                <div class="install-platform-box">
+                    <div class="install-platform-header">
+                        <span class="platform-badge">iOS</span>
+                        <strong>iPhone / iPad (Safari)</strong>
+                    </div>
+                    <ol class="install-steps-list">
+                        <li>Toca el botón <strong>Compartir</strong> (icono de cuadrado con flecha hacia arriba ⎋).</li>
+                        <li>Desplázate hacia abajo y selecciona <strong>"Agregar al inicio"</strong>.</li>
+                        <li>Toca <strong>"Agregar"</strong> en la esquina superior derecha.</li>
+                    </ol>
+                </div>
+
+                <!-- Alerta HTTPS vs HTTP local -->
+                <div class="install-https-note">
+                    <div class="note-icon">💡</div>
+                    <div class="note-text">
+                        <strong>¿No te aparece la opción en tu navegador?</strong>
+                        <p>Los navegadores requieren una conexión segura (<strong>HTTPS</strong>) para autorizar la instalación de apps PWA. Si estás conectado mediante la IP local (<code>http://192.168.x.x:8080</code>), ejecuta en la terminal de tu PC:</p>
+                        <div class="terminal-command-pill">npm run tunnel</div>
+                        <p>Y abre el enlace HTTPS que te proporcione en tu celular para instalarla con un solo toque.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button id="btn-done-install-guide" class="btn-primary" style="width: 100%;">¡Entendido!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR DE TOASTS FLOTANTES -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <!-- ==========================================================
+         ARQUITECTURA MVC EN JAVASCRIPT & REACT WIDGETS
+         ========================================================== -->
+    <!-- 1. Modelo (Model) -->
+    <script src="js/models/AuditLogger.js"></script>
+    <script src="js/models/HouseModel.js"></script>
+    <script src="js/models/AutomationsModel.js"></script>
+    <script src="js/models/NetworkHealthModel.js"></script>
+
+    <!-- 2. Servicios de Infraestructura (Audio, Red MQTT y Voz) -->
+    <script src="js/services/SoundService.js"></script>
+    <script src="js/services/MqttService.js"></script>
+    <script src="js/services/SpeechService.js"></script>
+
+    <!-- 3. Vistas Desacopladas (View) -->
+    <script src="js/views/FloorplanView.js"></script>
+    <script src="js/views/ActuatorsView.js"></script>
+    <script src="js/views/TelemetryView.js"></script>
+    <script src="js/views/ChartsView.js"></script>
+    <script src="js/views/AuditView.js"></script>
+    <script src="js/views/UIComponents.js"></script>
+    <script src="js/views/ReactWidgetsView.js"></script>
+
+    <!-- 4. Controlador Central (Controller) -->
+    <script src="js/controllers/AppController.js"></script>
+
+    <!-- 5. Bootstrapper de Inicio -->
+    <script src="js/app.js"></script>
+
+</body>
+
+</html>

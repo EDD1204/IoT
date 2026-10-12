@@ -1,0 +1,359 @@
+{
+    "version": 1,
+    "author": "Equipo IoT - UAEMex",
+    "editor": "wokwi",
+    "parts": [
+        {
+            "type": "board-esp32-devkit-c-v4",
+            "id": "esp",
+            "top": 0,
+            "left": 0,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-dht22",
+            "id": "dht",
+            "top": -150,
+            "left": -100,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-potentiometer",
+            "id": "pot_tinaco",
+            "top": -150,
+            "left": 100,
+            "attrs": {
+                "label": "Tinaco (HW-038)"
+            }
+        },
+        {
+            "type": "wokwi-pushbutton",
+            "id": "btn_lluvia",
+            "top": -147.4,
+            "left": -249.6,
+            "attrs": {
+                "color": "blue",
+                "label": "Lluvia"
+            }
+        },
+        {
+            "type": "wokwi-servo",
+            "id": "servo_puerta",
+            "top": 250,
+            "left": -250,
+            "attrs": {
+                "label": "Puerta"
+            }
+        },
+        {
+            "type": "wokwi-servo",
+            "id": "servo_v1",
+            "top": 350,
+            "left": -250,
+            "attrs": {
+                "label": "Ventana 1"
+            }
+        },
+        {
+            "type": "wokwi-servo",
+            "id": "servo_v2",
+            "top": 450,
+            "left": -250,
+            "attrs": {
+                "label": "Ventana 2"
+            }
+        },
+        {
+            "type": "wokwi-servo",
+            "id": "servo_v3",
+            "top": 550,
+            "left": -250,
+            "attrs": {
+                "label": "Ventana 3"
+            }
+        },
+        {
+            "type": "wokwi-led",
+            "id": "led1",
+            "top": -3.6,
+            "left": 253.4,
+            "attrs": {
+                "color": "white",
+                "label": "Cuarto 1"
+            }
+        },
+        {
+            "type": "wokwi-led",
+            "id": "led2",
+            "top": 54,
+            "left": 253.4,
+            "attrs": {
+                "color": "cyan",
+                "label": "Cuarto 2"
+            }
+        },
+        {
+            "type": "wokwi-led",
+            "id": "led3",
+            "top": 102,
+            "left": 253.4,
+            "attrs": {
+                "color": "cyan",
+                "label": "Cuarto 3"
+            }
+        },
+        {
+            "type": "wokwi-led",
+            "id": "led4",
+            "top": 150,
+            "left": 253.4,
+            "attrs": {
+                "color": "white",
+                "label": "Cuarto 4"
+            }
+        },
+        {
+            "type": "wokwi-resistor",
+            "id": "r1",
+            "top": 0,
+            "left": 150,
+            "attrs": {
+                "value": "220"
+            }
+        },
+        {
+            "type": "wokwi-resistor",
+            "id": "r2",
+            "top": 50,
+            "left": 150,
+            "attrs": {
+                "value": "220"
+            }
+        },
+        {
+            "type": "wokwi-resistor",
+            "id": "r3",
+            "top": 100,
+            "left": 150,
+            "attrs": {
+                "value": "220"
+            }
+        },
+        {
+            "type": "wokwi-resistor",
+            "id": "r4",
+            "top": 150,
+            "left": 150,
+            "attrs": {
+                "value": "220"
+            }
+        }
+    ],
+    "connections": [
+        [
+            "esp:TX",
+            "$serial:rx",
+            "",
+            []
+        ],
+        [
+            "esp:RX",
+            "$serial:tx",
+            "",
+            []
+        ],
+        [
+            "esp:3V3",
+            "dht:VCC",
+            "red",
+            []
+        ],
+        [
+            "esp:GND.1",
+            "dht:GND",
+            "black",
+            []
+        ],
+        [
+            "esp:4",
+            "dht:SDA",
+            "green",
+            []
+        ],
+        [
+            "esp:3V3",
+            "pot_tinaco:VCC",
+            "red",
+            []
+        ],
+        [
+            "esp:GND.1",
+            "pot_tinaco:GND",
+            "black",
+            []
+        ],
+        [
+            "esp:34",
+            "pot_tinaco:SIG",
+            "orange",
+            []
+        ],
+        [
+            "esp:32",
+            "btn_lluvia:1.l",
+            "blue",
+            []
+        ],
+        [
+            "btn_lluvia:2.r",
+            "esp:GND.1",
+            "black",
+            []
+        ],
+        [
+            "esp:18",
+            "r1:1",
+            "green",
+            []
+        ],
+        [
+            "r1:2",
+            "led1:A",
+            "green",
+            []
+        ],
+        [
+            "led1:C",
+            "esp:GND.1",
+            "black",
+            []
+        ],
+        [
+            "esp:19",
+            "r2:1",
+            "green",
+            []
+        ],
+        [
+            "r2:2",
+            "led2:A",
+            "green",
+            []
+        ],
+        [
+            "led2:C",
+            "esp:GND.1",
+            "black",
+            []
+        ],
+        [
+            "esp:21",
+            "r3:1",
+            "green",
+            []
+        ],
+        [
+            "r3:2",
+            "led3:A",
+            "green",
+            []
+        ],
+        [
+            "led3:C",
+            "esp:GND.1",
+            "black",
+            []
+        ],
+        [
+            "esp:22",
+            "r4:1",
+            "green",
+            []
+        ],
+        [
+            "r4:2",
+            "led4:A",
+            "green",
+            []
+        ],
+        [
+            "led4:C",
+            "esp:GND.1",
+            "black",
+            []
+        ],
+        [
+            "esp:5V",
+            "servo_puerta:V+",
+            "red",
+            []
+        ],
+        [
+            "esp:GND.2",
+            "servo_puerta:GND",
+            "black",
+            []
+        ],
+        [
+            "esp:27",
+            "servo_puerta:PWM",
+            "orange",
+            []
+        ],
+        [
+            "esp:5V",
+            "servo_v1:V+",
+            "red",
+            []
+        ],
+        [
+            "esp:GND.2",
+            "servo_v1:GND",
+            "black",
+            []
+        ],
+        [
+            "esp:13",
+            "servo_v1:PWM",
+            "orange",
+            []
+        ],
+        [
+            "esp:5V",
+            "servo_v2:V+",
+            "red",
+            []
+        ],
+        [
+            "esp:GND.2",
+            "servo_v2:GND",
+            "black",
+            []
+        ],
+        [
+            "esp:25",
+            "servo_v2:PWM",
+            "orange",
+            []
+        ],
+        [
+            "esp:5V",
+            "servo_v3:V+",
+            "red",
+            []
+        ],
+        [
+            "esp:GND.2",
+            "servo_v3:GND",
+            "black",
+            []
+        ],
+        [
+            "esp:26",
+            "servo_v3:PWM",
+            "orange",
+            []
+        ]
+    ],
+    "dependencies": {}
+}

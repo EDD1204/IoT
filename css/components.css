@@ -1,0 +1,1282 @@
+/**
+ * DomótiX UAEMex - Componentes de UI: Interruptores, Métricas, Gráficas, Modales y Toasts
+ */
+
+/* ==========================================================================
+   TARJETA CONTENEDORA BASE (CARD SURFACE)
+   ========================================================================== */
+.card-surface {
+    background: var(--surface-card);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+    position: relative;
+    transition: border-color 0.2s ease;
+}
+
+.card-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 12px;
+}
+
+.card-title-row h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.subtle-badge {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-hairline);
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   ALERTA DE PROTECCIÓN DE LLUVIA
+   ========================================================================== */
+.rain-notice-pill {
+    display: none;
+    background: var(--status-rose-subtle);
+    border: 1px solid rgba(225, 29, 72, 0.35);
+    border-radius: var(--radius-md);
+    padding: 12px 18px;
+    margin-bottom: 20px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    color: #fecdd3;
+    animation: rainPillAnim 0.3s var(--ease-spring);
+}
+
+.rain-notice-pill.active {
+    display: flex;
+}
+
+@keyframes rainPillAnim {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.rain-notice-pill .left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.84rem;
+}
+
+.rain-tag {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--status-rose);
+    color: white;
+    padding: 3px 9px;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   MÉTRICAS AMBIENTALES (DHT22 Y LLUVIA)
+   ========================================================================== */
+.metrics-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.metric-cell {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.metric-cell:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border-focus);
+}
+
+.metric-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.metric-value {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    font-feature-settings: "tnum";
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+
+.metric-foot {
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+}
+
+/* ==========================================================================
+   MEDIDOR GRADUADO DEL TINACO (HW-038)
+   ========================================================================== */
+.tinaco-gauge-panel {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+}
+
+.tinaco-gauge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.tinaco-track {
+    width: 100%;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tinaco-fill-fluid {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%);
+    border-radius: var(--radius-full);
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ==========================================================================
+   ESCENAS RÁPIDAS
+   ========================================================================== */
+.scenes-cluster {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.scene-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-hairline);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s var(--ease-smooth);
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.scene-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    border-color: var(--border-focus);
+    transform: translateY(-1px);
+}
+
+.scene-btn:active {
+    transform: scale(0.97);
+}
+
+/* ==========================================================================
+   INTERRUPTORES TÁCTILES (TACTILE TILES)
+   ========================================================================== */
+.switches-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.tactile-tile {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.25s var(--ease-smooth);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 110px;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.tactile-tile:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--border-focus);
+}
+
+.tactile-tile:active {
+    transform: scale(0.985);
+}
+
+.tile-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tile-icon-bubble {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-hairline);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    transition: all 0.25s ease;
+}
+
+/* Toggle Pill Switch Knob */
+.toggle-pill-housing {
+    width: 38px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-full);
+    position: relative;
+    padding: 2px;
+    transition: background 0.25s ease;
+}
+
+.toggle-knob {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #475569;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.25s ease;
+}
+
+.tile-bottom {
+    margin-top: 14px;
+}
+
+.tile-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.2;
+}
+
+.tile-subtitle {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    margin-top: 3px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* Estado Activo: Cálido (Cuartos 1 y 4) */
+.tactile-tile.warm.active {
+    background: rgba(217, 119, 6, 0.08);
+    border-color: rgba(217, 119, 6, 0.4);
+}
+
+.tactile-tile.warm.active .tile-icon-bubble {
+    background: var(--accent-warm);
+    color: white;
+    box-shadow: 0 0 12px rgba(217, 119, 6, 0.45);
+}
+
+.tactile-tile.warm.active .toggle-pill-housing {
+    background: var(--accent-warm);
+}
+
+.tactile-tile.warm.active .toggle-knob {
+    background: white;
+    transform: translateX(16px);
+}
+
+/* Estado Activo: Frío (Cuartos 2 y 3) */
+.tactile-tile.cool.active {
+    background: rgba(2, 132, 199, 0.08);
+    border-color: rgba(2, 132, 199, 0.4);
+}
+
+.tactile-tile.cool.active .tile-icon-bubble {
+    background: var(--accent-cool);
+    color: white;
+    box-shadow: 0 0 12px rgba(2, 132, 199, 0.45);
+}
+
+.tactile-tile.cool.active .toggle-pill-housing {
+    background: var(--accent-cool);
+}
+
+.tactile-tile.cool.active .toggle-knob {
+    background: white;
+    transform: translateX(16px);
+}
+
+/* Estado Activo: Actuador (Puerta y Ventanas) */
+.tactile-tile.actuator.active {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.tactile-tile.actuator.active .tile-icon-bubble {
+    background: var(--status-green);
+    color: white;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.45);
+}
+
+.tactile-tile.actuator.active .toggle-pill-housing {
+    background: var(--status-green);
+}
+
+.tactile-tile.actuator.active .toggle-knob {
+    background: white;
+    transform: translateX(16px);
+}
+
+/* ==========================================================================
+   GRÁFICAS DE TELEMETRÍA (CANVAS)
+   ========================================================================== */
+.charts-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.chart-card {
+    background: var(--surface-card);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.smooth-chart {
+    width: 100%;
+    height: 150px;
+    display: block;
+    border-radius: var(--radius-sm);
+    margin-top: 10px;
+}
+
+/* ==========================================================================
+   CONSOLA DE AUDITORÍA
+   ========================================================================== */
+.console-stream {
+    background: #090b10;
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    height: 180px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.74rem;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.stream-row {
+    display: flex;
+    gap: 10px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    padding-bottom: 4px;
+    align-items: baseline;
+    line-height: 1.4;
+}
+
+.stream-row .time {
+    color: var(--text-tertiary);
+    flex-shrink: 0;
+}
+
+.stream-row .tag {
+    font-weight: 700;
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    border-radius: var(--radius-xs);
+    white-space: nowrap;
+}
+
+.stream-row .tag.in   { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+.stream-row .tag.out  { background: rgba(56, 189, 248, 0.15); color: #38bdf8; }
+.stream-row .tag.warn { background: rgba(225, 29, 72, 0.15); color: #fb7185; }
+.stream-row .tag.info { background: rgba(255, 255, 255, 0.08); color: #e2e8f0; }
+
+/* Botones genéricos de UI */
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent-warm) 0%, #b45309 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: white;
+    font-weight: 700;
+    font-size: 0.8rem;
+    padding: 8px 18px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-hairline);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 8px 16px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--text-primary);
+}
+
+/* ==========================================================================
+   ARQUITECTURA DE PINES (GPIO)
+   ========================================================================== */
+.pinout-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.pin-item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.pin-mono-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border-hairline);
+    padding: 4px 8px;
+    border-radius: var(--radius-xs);
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.pin-desc h4 {
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+
+.pin-desc p {
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+/* ==========================================================================
+   MODAL DE AJUSTES (SETTINGS MODAL)
+   ========================================================================== */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 10, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-overlay.active {
+    display: flex;
+    animation: modalFadeIn 0.25s var(--ease-spring);
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal-card {
+    background: #141824;
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 480px;
+    padding: 24px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.modal-header h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+}
+
+.form-input {
+    width: 100%;
+    background: #090b10;
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: var(--accent-warm);
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2);
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+/* ==========================================================================
+   SISTEMA DE TOAST NOTIFICATIONS
+   ========================================================================== */
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+    width: max-content;
+    max-width: min(92vw, 440px);
+}
+
+.app-toast {
+    pointer-events: auto;
+    background: rgba(22, 27, 38, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    animation: toastSlideUp 0.3s var(--ease-spring);
+    transition: all 0.25s ease;
+}
+
+.app-toast.hiding {
+    opacity: 0;
+    transform: translateY(12px) scale(0.95);
+}
+
+@keyframes toastSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.toast-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.toast-body {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.35;
+    flex: 1;
+}
+
+.toast-close {
+    background: transparent;
+    border: none;
+    color: var(--text-tertiary);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.toast-close:hover {
+    color: var(--text-primary);
+}
+
+.toast-warn {
+    border-color: rgba(225, 29, 72, 0.4);
+    background: rgba(30, 20, 26, 0.95);
+}
+
+.toast-warn .toast-icon {
+    color: var(--status-rose);
+}
+
+.toast-success {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(18, 30, 26, 0.95);
+}
+
+.toast-success .toast-icon {
+    color: var(--status-green);
+}
+
+.toast-info {
+    border-color: rgba(56, 189, 248, 0.3);
+}
+
+.toast-info .toast-icon {
+    color: var(--accent-cool-soft);
+}
+
+/* ==========================================================================
+   LATENCIA RTT & BANNER OFFLINE
+   ========================================================================== */
+.ping-latency-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.70rem;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: var(--radius-full);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: rgba(16, 185, 129, 0.08);
+    color: #10b981;
+    margin-left: 4px;
+    letter-spacing: -0.02em;
+}
+
+.offline-network-banner {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(90deg, rgba(225, 29, 72, 0.16), rgba(217, 119, 6, 0.12));
+    border: 1px solid rgba(225, 29, 72, 0.35);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    color: var(--text-primary);
+    animation: fadeIn 0.3s ease;
+}
+
+.offline-network-banner.active {
+    display: flex;
+}
+
+.offline-network-banner svg {
+    color: var(--status-rose);
+    flex-shrink: 0;
+}
+
+.offline-network-banner strong {
+    font-size: 0.85rem;
+    color: #fecdd3;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.offline-network-banner p {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* ==========================================================================
+   BOTÓN ASISTENTE DE VOZ & ANIMACIÓN PULSANTE
+   ========================================================================== */
+#btn-voice.listening {
+    color: #f43f5e;
+    background: rgba(244, 63, 94, 0.18);
+    border-color: rgba(244, 63, 94, 0.5);
+    animation: pulseRing 1.4s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+@keyframes pulseRing {
+    0% {
+        box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.6);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(244, 63, 94, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(244, 63, 94, 0);
+    }
+}
+
+/* ==========================================================================
+   WIDGET REACT 1: ANALÍTICA DE CONFORT Y RESERVA HÍDRICA
+   ========================================================================== */
+.comfort-analytics-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.comfort-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.comfort-metric-box {
+    background: rgba(12, 14, 20, 0.6);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.comfort-label {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+
+.comfort-val {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.comfort-sub {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+}
+
+.comfort-autonomy-bar-wrap {
+    background: rgba(12, 14, 20, 0.6);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.comfort-autonomy-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+}
+
+.comfort-autonomy-header strong {
+    color: var(--accent-cool-soft);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.comfort-progress-track {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.comfort-progress-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.6s var(--ease-spring), background-color 0.4s ease;
+}
+
+/* ==========================================================================
+   WIDGET REACT 2: HUB DE AUTOMATIZACIONES INTELIGENTES
+   ========================================================================== */
+.automations-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.automations-intro {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.rules-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rule-item-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(12, 14, 20, 0.55);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: 12px 16px;
+    transition: all 0.25s var(--ease-smooth);
+}
+
+.rule-item-card.active {
+    border-color: rgba(217, 119, 6, 0.25);
+    background: rgba(18, 22, 32, 0.65);
+}
+
+.rule-item-card.disabled {
+    opacity: 0.65;
+}
+
+.rule-icon-box {
+    font-size: 1.3rem;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.rule-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.rule-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.rule-name {
+    font-size: 0.86rem;
+    color: var(--text-primary);
+}
+
+.rule-badge-cat {
+    font-size: 0.64rem;
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-tertiary);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.rule-desc {
+    font-size: 0.74rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.tactile-switch-btn {
+    width: 44px;
+    height: 24px;
+    border-radius: var(--radius-full);
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--border-hairline);
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.25s ease, border-color 0.25s ease;
+    padding: 0;
+}
+
+.tactile-switch-btn.on {
+    background: #10b981;
+    border-color: #059669;
+}
+
+.tactile-switch-btn .knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.tactile-switch-btn.on .knob {
+    transform: translateX(20px);
+}
+
+/* ==========================================================================
+   WIDGET REACT 3: DIAGNÓSTICO DE RED Y BROKER FAILOVER
+   ========================================================================== */
+.network-diagnostics-card {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.net-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    border: 1px solid;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.pulse-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    display: inline-block;
+    animation: statusPulse 2s infinite ease-in-out;
+}
+
+.net-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.net-stat-box {
+    background: rgba(12, 14, 20, 0.6);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.net-stat-label {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.net-stat-val {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.net-stat-sub {
+    font-size: 0.68rem;
+    color: var(--text-secondary);
+}
+
+.offline-queue-alert {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    gap: 12px;
+}
+
+.offline-queue-alert .queue-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.offline-queue-alert strong {
+    font-size: 0.82rem;
+    color: #fbbf24;
+}
+
+.offline-queue-alert span {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+}
+
+.btn-sync-queue {
+    background: #f59e0b;
+    color: #0c0e14;
+    font-weight: 700;
+    font-size: 0.74rem;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: opacity 0.2s ease;
+}
+
+.btn-sync-queue:hover {
+    opacity: 0.9;
+}
+
+.broker-selector-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-hairline);
+}
+
+.broker-sel-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.broker-dropdown {
+    width: 100%;
+    background: #0c0e14;
+    border: 1px solid var(--border-focus);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+}
+
+/* ==========================================================================
+   PRESETS DE BROKER EN MODAL
+   ========================================================================== */
+.broker-presets-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.broker-preset-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-xs);
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    padding: 6px 4px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.broker-preset-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+}
+
+.broker-preset-btn.selected {
+    background: rgba(217, 119, 6, 0.18);
+    border-color: var(--accent-warm);
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   TOOLBAR DE FILTROS EN AUDITORÍA
+   ========================================================================== */
+.audit-actions-cluster {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.audit-filter-select {
+    background: #090b10;
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-xs);
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    padding: 3px 6px;
+    outline: none;
+    cursor: pointer;
+}
+
+/* ==========================================================================
+   MODAL GUÍA DE INSTALACIÓN EN MÓVIL
+   ========================================================================== */
+.install-guide-card {
+    max-width: 520px;
+    max-height: 88vh;
+    overflow-y: auto;
+}
+
+.install-guide-lead {
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    margin-bottom: 14px;
+    line-height: 1.5;
+}
+
+.install-platform-box {
+    background: rgba(12, 14, 20, 0.65);
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--radius-md);
+    padding: 14px;
+    margin-bottom: 12px;
+}
+
+.install-platform-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 0.86rem;
+    color: var(--text-primary);
+}
+
+.platform-badge {
+    background: var(--accent-warm-subtle);
+    color: var(--accent-warm-soft);
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: var(--radius-xs);
+    text-transform: uppercase;
+}
+
+.install-steps-list {
+    padding-left: 20px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.install-steps-list strong {
+    color: var(--text-primary);
+}
+
+.install-https-note {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+    align-items: flex-start;
+}
+
+.install-https-note .note-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.install-https-note .note-text {
+    flex: 1;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.install-https-note strong {
+    color: #fbbf24;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.terminal-command-pill {
+    background: #090b10;
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: var(--radius-xs);
+    padding: 4px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    color: #38bdf8;
+    width: fit-content;
+    margin: 6px 0;
+}
+
+

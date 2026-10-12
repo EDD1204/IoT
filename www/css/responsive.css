@@ -1,0 +1,441 @@
+/**
+ * DomótiX UAEMex - Adaptabilidad Total Multiplataforma (Responsive & Adaptive Design)
+ * Optimizado para Cualquier Tamaño de Pantalla:
+ * Ultra-Wide (4K), Desktops, Tablets, Móviles Pequeños (320px) y Orientación Horizontal.
+ */
+
+/* ==========================================================================
+   LAYOUT GRID PRINCIPAL (DESKTOP DEFAULT)
+   ========================================================================== */
+.layout-grid {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+/* ==========================================================================
+   1. PANTALLAS ULTRA-ANCHAS Y 4K (min-width: 1441px)
+   ========================================================================== */
+@media (min-width: 1441px) {
+    main.main-viewport {
+        max-width: 1560px;
+        padding: 0 36px;
+    }
+
+    .layout-grid {
+        grid-template-columns: 1.35fr 1fr;
+        gap: 32px;
+    }
+
+    #floorplan-svg {
+        max-height: 540px;
+    }
+
+    .metric-value {
+        font-size: 1.65rem;
+    }
+
+    .tactile-tile {
+        min-height: 120px;
+    }
+
+    .smooth-chart {
+        height: 180px;
+    }
+}
+
+/* ==========================================================================
+   2. TABLETS EN ORIENTACIÓN VERTICAL Y PORTÁTILES (max-width: 1024px)
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .layout-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .charts-container {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .pinout-layout {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+}
+
+/* ==========================================================================
+   3. TABLETS Y MÓVILES (max-width: 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+    /* Barra de navegación móvil visible */
+    nav.mobile-tab-bar {
+        display: flex;
+    }
+
+    /* Ocultar pestañas de escritorio */
+    .tabs-wrapper {
+        display: none;
+    }
+
+    body {
+        padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+    }
+
+    header.app-header {
+        padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px 16px;
+    }
+
+    main.main-viewport {
+        margin-top: 14px;
+        padding: 0 14px;
+    }
+
+    .card-surface {
+        padding: 18px 16px;
+        border-radius: var(--radius-md);
+    }
+
+    .card-title-row {
+        margin-bottom: 16px;
+    }
+
+    .card-title-row h2 {
+        font-size: 0.94rem;
+    }
+
+    /* Métricas ambientales compactas */
+    .metrics-row {
+        gap: 8px;
+    }
+
+    .metric-cell {
+        padding: 10px 10px;
+    }
+
+    .metric-value {
+        font-size: 1.22rem;
+    }
+
+    .metric-header {
+        font-size: 0.68rem;
+    }
+
+    .metric-foot {
+        font-size: 0.64rem;
+    }
+
+    /* Gráficas ocupan 100% de ancho */
+    .charts-container {
+        grid-template-columns: 1fr;
+    }
+
+    .smooth-chart {
+        height: 140px;
+    }
+
+    /* Modal adaptado a pantalla completa pequeña */
+    .modal-card {
+        padding: 20px 16px;
+        border-radius: var(--radius-md);
+    }
+}
+
+/* ==========================================================================
+   4. TELÉFONOS COMPACTOS (max-width: 480px, e.g. iPhone SE, Androids)
+   ========================================================================== */
+@media (max-width: 480px) {
+    header.app-header {
+        padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px 12px;
+    }
+
+    .brand-group {
+        gap: 10px;
+    }
+
+    .brand-monogram {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+
+    .brand-details h1 {
+        font-size: 1.02rem;
+    }
+
+    .brand-details p {
+        display: none; /* Ahorra espacio vertical crucial en móviles */
+    }
+
+    .header-actions {
+        gap: 6px;
+    }
+
+    .connection-indicator {
+        padding: 5px 10px;
+        font-size: 0.7rem;
+    }
+
+    .action-icon-btn {
+        width: 34px;
+        height: 34px;
+    }
+
+    .btn-install-pwa {
+        padding: 5px 10px;
+        font-size: 0.7rem;
+    }
+
+    .btn-install-pwa span {
+        display: none; /* Solo icono en pantallas angostas */
+    }
+
+    main.main-viewport {
+        padding: 0 10px;
+        margin-top: 10px;
+    }
+
+    .blueprint-card {
+        padding: 10px 8px;
+    }
+
+    #floorplan-svg {
+        max-height: 360px;
+    }
+
+    .blueprint-footer-guide {
+        font-size: 0.68rem;
+        gap: 10px;
+    }
+
+    /* Switches táctiles en móvil */
+    .switches-grid {
+        gap: 8px;
+    }
+
+    .tactile-tile {
+        padding: 12px 10px;
+        min-height: 98px;
+    }
+
+    .tile-icon-bubble {
+        width: 30px;
+        height: 30px;
+    }
+
+    .tile-icon-bubble svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .toggle-pill-housing {
+        width: 34px;
+        height: 20px;
+    }
+
+    .toggle-knob {
+        width: 16px;
+        height: 16px;
+    }
+
+    .tactile-tile.warm.active .toggle-knob,
+    .tactile-tile.cool.active .toggle-knob,
+    .tactile-tile.actuator.active .toggle-knob {
+        transform: translateX(14px);
+    }
+
+    .tile-title {
+        font-size: 0.82rem;
+    }
+
+    .tile-subtitle {
+        font-size: 0.66rem;
+    }
+
+    /* Escenas en chip compacto */
+    .scenes-cluster {
+        gap: 4px;
+    }
+
+    .scene-btn {
+        padding: 5px 8px;
+        font-size: 0.68rem;
+    }
+
+    /* Toasts en móvil */
+    .toast-container {
+        bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+        width: calc(100vw - 24px);
+    }
+}
+
+/* ==========================================================================
+   5. TELÉFONOS EXTRA-PEQUEÑOS / FOLDABLES CERRADOS (max-width: 360px)
+   ========================================================================== */
+@media (max-width: 360px) {
+    .brand-badge {
+        display: none;
+    }
+
+    #conn-text {
+        display: none; /* Solo el punto de estado en pantallas ultra-angostas */
+    }
+
+    .connection-indicator {
+        padding: 6px;
+        border-radius: 50%;
+    }
+
+    .metric-value {
+        font-size: 1.05rem;
+    }
+
+    .switches-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+
+    .tactile-tile {
+        padding: 10px 8px;
+    }
+}
+
+/* ==========================================================================
+   6. MODO HORIZONTAL EN TELÉFONOS (LANDSCAPE COMPACTO: max-height: 520px)
+   ========================================================================== */
+@media (orientation: landscape) and (max-height: 520px) {
+    header.app-header {
+        position: relative;
+        padding: calc(6px + env(safe-area-inset-top, 0px)) 16px 6px 16px;
+    }
+
+    body {
+        padding-bottom: 20px;
+    }
+
+    /* En horizontal, colocar plano y controles lado a lado */
+    .layout-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+    }
+
+    #floorplan-svg {
+        max-height: calc(100vh - 140px);
+    }
+
+    /* Barra móvil se adapta a una barra lateral o flotante sutil */
+    nav.mobile-tab-bar {
+        position: sticky;
+        bottom: 0;
+        padding: 4px 12px calc(4px + env(safe-area-inset-bottom, 0px)) 12px;
+        background: rgba(11, 14, 20, 0.98);
+    }
+
+    .mob-tab-item {
+        flex-direction: row;
+        gap: 6px;
+        padding: 4px 10px;
+        font-size: 0.68rem;
+    }
+
+    .mob-tab-item svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .switches-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .tactile-tile {
+        min-height: 84px;
+        padding: 10px;
+    }
+}
+
+/* ==========================================================================
+   7. MUESCAS, BARRAS DE NAVEGACIÓN Y ACCESIBILIDAD
+   ========================================================================== */
+@supports (padding: env(safe-area-inset-bottom)) {
+    main.main-viewport {
+        padding-left: calc(14px + env(safe-area-inset-left, 0px));
+        padding-right: calc(14px + env(safe-area-inset-right, 0px));
+    }
+}
+
+/* Desactivar animaciones si el usuario tiene activado 'reducir movimiento' */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .subtle-drop {
+        display: none !important;
+    }
+}
+
+/* ==========================================================================
+   8. ADAPTABILIDAD PARA WIDGETS REACTIVOS Y ALTA DISPONIBILIDAD
+   ========================================================================== */
+@media (max-width: 768px) {
+    .comfort-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .comfort-metric-box:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .net-stats-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    .net-stat-box:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .offline-queue-alert {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .btn-sync-queue {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .comfort-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .comfort-metric-box:last-child {
+        grid-column: auto;
+    }
+
+    .net-stats-row {
+        grid-template-columns: 1fr;
+    }
+
+    .net-stat-box:last-child {
+        grid-column: auto;
+    }
+
+    .broker-presets-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rule-item-card {
+        padding: 10px 12px;
+        gap: 10px;
+    }
+}
+
