@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Interfaz IoT</title>
+    <style>
+        /* Estilos generales de la página */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            margin: 0; 
+            background-color: #f4f4f9; 
+            padding-bottom: 40px;
+        }
+
+        /* Barra superior con títulos centrados */
+        header {
+            background-color: #1e293b;
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 { 
+            margin: 0; 
+            font-size: 22px; 
+            color: #ffffff; 
+        }
+
+        header h2 { 
+            margin: 5px 0 0 0; 
+            font-size: 14px; 
+            color: #94a3b8; 
+            font-weight: normal;
+        }
+
+        /* Contenedor principal: columnas con espacio */
+        .main-layout {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 40px;
+            max-width: 800px;
+            margin: 30px auto 0 auto;
+            padding: 0 20px;
+        }
+
+        .controls-container {
+            flex: 0 1 300px;
+        }
+
+        /* Botones modernos y proporcionados */
+        .button { 
+            background-color: #3b82f6; 
+            border: none; 
+            color: white; 
+            padding: 14px 25px; 
+            font-size: 16px; 
+            font-weight: bold;
+            margin: 8px; 
+            cursor: pointer; 
+            border-radius: 30px; 
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .button:hover {
+            transform: scale(1.03);
+            background-color: #2563eb;
+        }
+
+        /* Estilo cuando está apagado / botón secundario */
+        .button2 { 
+            background-color: #64748b; 
+            box-shadow: 0 4px 10px rgba(100, 116, 139, 0.3);
+        }
+
+        .button2:hover {
+            background-color: #475569;
+        }
+
+        .status { 
+            font-weight: bold; 
+            font-size: 18px; 
+        }
+
+        /* Tarjetas de botones más pequeñas */
+        .card {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .card p {
+            margin: 5px 0 10px 0;
+            font-size: 15px;
+        }
+
+        /* Cuadro para los integrantes a la derecha */
+        .team-card {
+            background: white;
+            padding: 15px;
+            width: 220px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-left: 4px solid #3b82f6;
+            text-align: left;
+        }
+
+        .team-card h3 {
+            margin: 0 0 8px 0;
+            font-size: 13px;
+            color: #1e293b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .team-card ul {
+            margin: 0;
+            padding-left: 15px;
+            color: #475569;
+            font-size: 12px;
+        }
+
+        .team-card li {
+            margin-bottom: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Barra Superior Centrada -->
+    <header>
+        <h1>Interacción Hombre-Máquina</h1>
+        <h2>Simulador Panel IoT (Sin ESP8266)</h2>
+    </header>
+
+    <!-- Estructura Principal en Columnas -->
+    <div class="main-layout">
+        
+        <!-- Controles de los Pines (Columna Izquierda) -->
+        <div class="controls-container">
+            <div class="card">
+                <p>GPIO 5 - Estado: <span id="status5" class="status" style="color: #ef4444;">OFF</span></p>
+                <button id="btn5" class="button" onclick="togglePin(5)">ENCENDER</button>
+            </div>
+
+            <div class="card">
+                <p>GPIO 4 - Estado: <span id="status4" class="status" style="color: #ef4444;">OFF</span></p>
+                <button id="btn4" class="button" onclick="togglePin(4)">ENCENDER</button>
+            </div>
+        </div>
+
+        <!-- Cuadro independiente para los integrantes (Columna Derecha) -->
+        <div class="team-card">
+            <h3>Integrantes:</h3>
+            <ul>
+                <li><strong>Arcos Gómez Eduardo</strong></li>
+                <li><strong>Núñes de los Santos Yael Alejandro</strong></li>
+                <li><strong>Tovar Espinoza Fernando de Jesus</strong></li>
+            </ul>
+        </div>
+
+    </div>
+
+    <script>
+        let states = { 5: false, 4: false };
+
+        function togglePin(pin) {
+            states[pin] = !states[pin];
+            let statusSpan = document.getElementById(`status${pin}`);
+            let btn = document.getElementById(`btn${pin}`);
+
+            if (states[pin]) {
+                statusSpan.innerText = "ON";
+                statusSpan.style.color = "#22c55e";
+                btn.innerText = "APAGAR"; // Sin número al lado
+                btn.classList.add("button2");
+            } else {
+                statusSpan.innerText = "OFF";
+                statusSpan.style.color = "#ef4444";
+                btn.innerText = "ENCENDER"; // Sin número al lado
+                btn.classList.remove("button2");
+            }
+            console.log(`Pin ${pin} cambiado a: ${states[pin] ? 'HIGH' : 'LOW'}`);
+        }
+    </script>
+</body>
+</html>
