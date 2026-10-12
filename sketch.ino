@@ -1,40 +1,40 @@
 #include <ArduinoJson.h>
 #include <DHT.h>
-#include <ESP32Servo.h>
 #include <PubSubClient.h>
 #include <WebServer.h>
 #include <WiFi.h>
 
 // ==========================================
-// CONFIGURACIÓN DE PINES (HARDWARE FÍSICO / WOKWI)
+// CONFIGURACIÓN DE PINES (HARDWARE FÍSICO / 8 LEDs)
 // ==========================================
-// 1. Iluminación de recámaras (4 LEDs físicos / Módulo Relevador)
+// 1. Iluminación de recámaras (4 LEDs físicos / Relevador)
 const int PIN_LEDS[4] = {18, 19, 21, 22}; // Cuarto 1: 18, Cuarto 2: 19, Cuarto 3: 21, Cuarto 4: 22
 
-// 2. Actuadores de Puerta y Ventanas (Servomotores PWM SG90)
-#define PIN_SERVO_PUERTA 27 // GPIO 27 (Puerta principal: 0° cerrada, 90° abierta)
-#define PIN_LED_PUERTA 27   // Alias de compatibilidad
-const int PIN_VENTANAS[3] = {13, 25, 26}; // V1: GPIO 13, V2: GPIO 25, V3: GPIO 26
+// 2. Actuadores de Puerta y Ventanas (LEDs que SIMULAN Servomotores)
+// HIGH = Abierta / Activa (LED Encendido)
+// LOW  = Cerrada / Inactiva (LED Apagado)
+#define PIN_LED_PUERTA 27 // GPIO 27 (LED que simula servomotor de Puerta)
+const int PIN_VENTANAS[3] = {13, 25, 26}; // V1: GPIO 13, V2: GPIO 25, V3: GPIO 26 (LEDs que simulan servomotores de Ventanas)
 
 // 3. Sensores
 #define DHTPIN 4
 #define DHTTYPE DHT22 // Sensor de temperatura y humedad (DHT22 o DHT11)
-#define PIN_TINACO 34 // ADC1_CH6 (Potenciómetro en Wokwi / Sensor de nivel de agua HW-038 en físico)
-#define PIN_LLUVIA 32 // ADC1_CH4 (Botón a GND en Wokwi / Sensor de lluvia HW-080 DO/AO en físico)
+#define PIN_TINACO 34 // ADC1_CH6 (Sensor de nivel de agua HW-038 en físico / Potenciómetro)
+#define PIN_LLUVIA 32 // ADC1_CH4 (Sensor de lluvia HW-80 con placa controladora HW-103 v0.1)
 
 // ==========================================
 // PARÁMETROS DE CALIBRACIÓN DE SENSORES
 // ==========================================
 // Sensor de Nivel de Agua HW-038 (Tinaco):
-// Escala adaptada de 0 a 100%:
-#define TINACO_ADC_MIN 50    // 0% (sensor seco / potenciómetro al mínimo)
-#define TINACO_ADC_MAX 3500  // 100% (sensor totalmente sumergido / pot al máximo)
+// En agua corriente a 3.3V el sensor suele medir entre 1800 y 2200 sumergido al máximo.
+#define TINACO_ADC_MIN 80    // 0% (sensor seco al aire libre)
+#define TINACO_ADC_MAX 2100  // 100% (sensor totalmente sumergido en agua corriente)
 
-// Sensor de Lluvia HW-080 / Pulsador Wokwi:
-// Con pinMode(PIN_LLUVIA, INPUT_PULLUP):
-// - Sin lluvia / pulsador libre: ~4095
-// - Lluvia activa / pulsador presionado: ~0 (< 2600)
-#define UMBRAL_LLUVIA_ADC 2600
+// Sensor de Lluvia HW-80 + Módulo LM393 HW-103 v0.1:
+// Compatible automáticamente si conectas al pin DO o al pin AO del HW-103:
+// - Si usas DO: en seco el comparador da HIGH (1); con gotas conmuta a LOW (0).
+// - Si usas AO: en seco el ADC mide ~3500-4095; con gotas cae a < 2500.
+#define UMBRAL_LLUVIA_ADC 2500 // Umbral para salida analógica (AO)
 
 // ==========================================
 // CONFIGURACIÓN DE RED (MODO DUAL AP + STA/MQTT)
@@ -48,11 +48,11 @@ const IPAddress AP_IP(192, 168, 4, 1);
 const IPAddress AP_GATEWAY(192, 168, 4, 1);
 const IPAddress AP_SUBNET(255, 255, 255, 0);
 
-// 2. Red externa opcional / Simulador Wokwi
-const char *STA_SSID = "Wokwi-GUEST"; // Se conecta automáticamente en Wokwi o cambia a tu Wi-Fi
-const char *STA_PASS = "";
+// 2. Red externa opcional (Router local "Domotix" o simulador "Wokwi-GUEST")
+const char *STA_SSID = "Domotix";
+const char *STA_PASS = "12345678";
 
-// 3. Broker MQTT (Activo cuando STA está conectado a red externa o Wokwi)
+// 3. Broker MQTT (Activo solo si STA se conecta a un router o simulador)
 const bool HABILITAR_MQTT = true;
 const char *mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 1883;
@@ -70,9 +70,6 @@ DHT dht(DHTPIN, DHTTYPE);
 WiFiClient espClient;
 PubSubClient client(espClient);
 WebServer server(80);
-
-Servo servoPuerta;
-Servo servoVentanas[3];
 
 bool estadoLuces[4] = {false, false, false, false};
 bool puertaAbierta = false;
@@ -95,7 +92,7 @@ void moverVentanas(bool abrir);
 void controlarLuz(int cuarto, bool estado);
 
 // ==========================================
-// FUNCIONES DE CONTROL DE HARDWARE
+// FUNCIONES DE CONTROL DE HARDWARE (LEDS FÍSICOS)
 // ==========================================
 void controlarLuz(int cuarto, bool estado) {
   if (cuarto >= 1 && cuarto <= 4) {
@@ -108,37 +105,39 @@ void controlarLuz(int cuarto, bool estado) {
 
 void moverPuerta(bool abrir) {
   puertaAbierta = abrir;
-  servoPuerta.write(abrir ? 90 : 0);
-  Serial.printf("[ACCIÓN] Puerta -> %s (Servo en GPIO %d a %d°)\n",
-                abrir ? "ABIERTA" : "CERRADA", PIN_SERVO_PUERTA, abrir ? 90 : 0);
+  digitalWrite(PIN_LED_PUERTA, abrir ? HIGH : LOW);
+  Serial.printf("[ACCIÓN] Puerta (LED Simulado) -> %s (GPIO %d -> %s)\n",
+                abrir ? "ABIERTA" : "CERRADA",
+                PIN_LED_PUERTA, abrir ? "HIGH (ENCENDIDO)" : "LOW (APAGADO)");
 }
 
 void controlarVentana(int numVentana, bool abrir) {
   if (abrir && lluviaDetectada) {
-    Serial.printf("[ALERTA] Bloqueo de seguridad: No se puede abrir Ventana %d mientras llueve.\n", numVentana);
+    Serial.printf("[ALERTA] Bloqueo de seguridad: No se puede abrir Ventana %d mientras llueve (HW-80 mojado).\n", numVentana);
     return;
   }
   if (numVentana >= 1 && numVentana <= 3) {
     estadoVentanas[numVentana - 1] = abrir;
-    servoVentanas[numVentana - 1].write(abrir ? 90 : 0);
+    digitalWrite(PIN_VENTANAS[numVentana - 1], abrir ? HIGH : LOW);
     ventanasAbiertas = (estadoVentanas[0] && estadoVentanas[1] && estadoVentanas[2]);
-    Serial.printf("[ACCIÓN] Ventana %d (GPIO %d) -> %s (Servo a %d°)\n",
-                  numVentana, PIN_VENTANAS[numVentana - 1], abrir ? "ABIERTA" : "CERRADA", abrir ? 90 : 0);
+    Serial.printf("[ACCIÓN] Ventana %d (LED Simulado en GPIO %d) -> %s (%s)\n",
+                  numVentana, PIN_VENTANAS[numVentana - 1],
+                  abrir ? "ABIERTA" : "CERRADA", abrir ? "HIGH (ENCENDIDO)" : "LOW (APAGADO)");
   }
 }
 
 void moverVentanas(bool abrir) {
   if (abrir && lluviaDetectada) {
-    Serial.println("[ALERTA] Bloqueo de seguridad: No se pueden abrir ventanas mientras llueve.");
+    Serial.println("[ALERTA] Bloqueo de seguridad: No se pueden abrir ventanas mientras llueve (HW-80 mojado).");
     return;
   }
   for (int i = 0; i < 3; i++) {
     estadoVentanas[i] = abrir;
-    servoVentanas[i].write(abrir ? 90 : 0);
+    digitalWrite(PIN_VENTANAS[i], abrir ? HIGH : LOW);
   }
   ventanasAbiertas = abrir;
-  Serial.printf("[ACCIÓN] Todas las Ventanas -> %s (Servos en GPIO 13, 25, 26 a %d°)\n",
-                abrir ? "ABIERTAS" : "CERRADAS", abrir ? 90 : 0);
+  Serial.printf("[ACCIÓN] Todas las Ventanas (LEDs en GPIO 13, 25, 26) -> %s (%s)\n",
+                abrir ? "ABIERTAS" : "CERRADAS", abrir ? "HIGH (ENCENDIDOS)" : "LOW (APAGADOS)");
 }
 
 // ==========================================
@@ -156,7 +155,7 @@ String obtenerJsonTelemetria() {
   }
   int lecturaTinaco = sumaTinaco / 4;
 
-  // Calibración adaptada (0 a 100%)
+  // Calibración adaptada al HW-038 en agua (0% a 100%)
   int nivelTinaco = map(lecturaTinaco, TINACO_ADC_MIN, TINACO_ADC_MAX, 0, 100);
   nivelTinaco = constrain(nivelTinaco, 0, 100);
 
@@ -164,6 +163,9 @@ String obtenerJsonTelemetria() {
     t = 22.5; // Respaldo térmico en caso de retardo del sensor
     h = 50.0;
   }
+
+  int adcRawLluvia = analogRead(PIN_LLUVIA);
+  int doRawLluvia = digitalRead(PIN_LLUVIA);
 
 #if ARDUINOJSON_VERSION_MAJOR >= 7
   JsonDocument doc;
@@ -176,6 +178,8 @@ String obtenerJsonTelemetria() {
   doc["nivel_tinaco"] = nivelTinaco;
   doc["tinaco_adc_raw"] = lecturaTinaco; // Lectura cruda para facilitar calibración
   doc["lluvia"] = lluviaDetectada;
+  doc["lluvia_adc"] = adcRawLluvia;       // Lectura analógica HW-80 / HW-103
+  doc["lluvia_do"] = doRawLluvia;         // Lectura digital HW-103 (0 = Lluvia, 1 = Seco)
   doc["puerta_abierta"] = puertaAbierta;
   doc["ventanas_abiertas"] = ventanasAbiertas;
 
@@ -206,7 +210,7 @@ void enviarTelemetria() {
 }
 
 // ==========================================
-// CALLBACK MQTT (RECEPCIÓN DESDE WOKWI / BROKER)
+// CALLBACK MQTT (RECEPCIÓN DESDE LA NUBE / WOKWI)
 // ==========================================
 void mqttCallback(char *topic, byte *payload, unsigned int length) {
 #if ARDUINOJSON_VERSION_MAJOR >= 7
@@ -350,11 +354,11 @@ void handleRoot() {
 </head>
 <body>
   <div class="container">
-    <h1>DomótiX UAEMex <span class="badge">ESP32 Control Directo</span></h1>
+    <h1>DomótiX UAEMex <span class="badge">ESP32 8 LEDs Control</span></h1>
     <p style="color:#94a3b8; font-size:0.9rem;">Servidor Web Local • Red Wi-Fi: <b>Domotix-UAEMex</b></p>
     
     <div class="card">
-      <h3>💡 Control de Iluminación</h3>
+      <h3>💡 Iluminación de Cuartos (4 LEDs)</h3>
       <div class="grid">
         <button id="btn-l1" onclick="toggleLuz(1)">Cuarto 1 (GPIO 18)</button>
         <button id="btn-l2" onclick="toggleLuz(2)">Cuarto 2 (GPIO 19)</button>
@@ -364,7 +368,7 @@ void handleRoot() {
     </div>
 
     <div class="card">
-      <h3>🚪 Accesos y Ventanas (Servomotores)</h3>
+      <h3>🚪 Accesos y Ventanas (4 LEDs Simulados)</h3>
       <div class="grid">
         <button id="btn-door" onclick="togglePuerta()">Puerta (GPIO 27)</button>
         <button id="btn-win-all" onclick="toggleTodasVentanas()">Todas Ventanas</button>
@@ -377,11 +381,11 @@ void handleRoot() {
     </div>
 
     <div class="card">
-      <h3>📊 Telemetría en Tiempo Real</h3>
+      <h3>📊 Telemetría de Sensores en Vivo</h3>
       <p>Temperatura: <span id="temp" class="status-val">--</span> °C</p>
       <p>Humedad: <span id="hum" class="status-val">--</span> %</p>
       <p>Tinaco HW-038: <span id="tinaco" class="status-val">--</span></p>
-      <p>Lluvia HW-080: <span id="lluvia" class="status-val">--</span></p>
+      <p>Lluvia (HW-80 / HW-103): <span id="lluvia" class="status-val">--</span></p>
     </div>
   </div>
 
@@ -397,13 +401,17 @@ void handleRoot() {
         document.getElementById('temp').innerText = d.temperatura;
         document.getElementById('hum').innerText = d.humedad;
         document.getElementById('tinaco').innerText = d.nivel_tinaco + '% (ADC: ' + (d.tinaco_adc_raw !== undefined ? d.tinaco_adc_raw : '--') + ')';
-        document.getElementById('lluvia').innerText = d.lluvia ? '🌧️ SÍ (Cerrado por seguridad)' : '☀️ NO (Seco)';
+        
+        const lluviaInfo = d.lluvia 
+          ? '🌧️ ¡LLUVIA ACTIVA! (ADC: ' + (d.lluvia_adc || '--') + ' | DO: ' + (d.lluvia_do !== undefined ? d.lluvia_do : '--') + ')' 
+          : '☀️ Seco (ADC: ' + (d.lluvia_adc || '--') + ' | DO: ' + (d.lluvia_do !== undefined ? d.lluvia_do : '--') + ')';
+        document.getElementById('lluvia').innerText = lluviaInfo;
         
         pOpen = Boolean(d.puerta_abierta);
         vOpen = Boolean(d.ventanas_abiertas);
         
         document.getElementById('btn-door').className = pOpen ? 'on' : '';
-        document.getElementById('btn-door').innerText = 'Puerta (' + (pOpen ? 'ABIERTA' : 'CERRADA') + ')';
+        document.getElementById('btn-door').innerText = 'Puerta (' + (pOpen ? 'ABIERTA / LED ON' : 'CERRADA / LED OFF') + ')';
 
         document.getElementById('btn-win-all').className = vOpen ? 'on' : '';
         document.getElementById('btn-win-all').innerText = 'Todas (' + (vOpen ? 'ABIERTAS' : 'CERRADAS') + ')';
@@ -413,8 +421,11 @@ void handleRoot() {
           vent[1] = Boolean(d.ventanas.v2);
           vent[2] = Boolean(d.ventanas.v3);
           document.getElementById('btn-w1').className = vent[0] ? 'on' : '';
+          document.getElementById('btn-w1').innerText = 'V1 (' + (vent[0] ? 'ON' : 'OFF') + ')';
           document.getElementById('btn-w2').className = vent[1] ? 'on' : '';
+          document.getElementById('btn-w2').innerText = 'V2 (' + (vent[1] ? 'ON' : 'OFF') + ')';
           document.getElementById('btn-w3').className = vent[2] ? 'on' : '';
+          document.getElementById('btn-w3').innerText = 'V3 (' + (vent[2] ? 'ON' : 'OFF') + ')';
         }
 
         if (d.luces) {
@@ -486,8 +497,8 @@ void setup_web_server() {
 // ==========================================
 void setup_wifi() {
   Serial.println("\n==========================================");
-  Serial.println("  DOMÓTIX UAEMex — MODO DUAL INTELIGENTE");
-  Serial.println("  (Red Local AP + Soporte Wokwi / MQTT)");
+  Serial.println("  DOMÓTIX UAEMex — MODO DUAL RED LOCAL");
+  Serial.println("  (Punto de Acceso Autónomo 100% Sin Internet)");
   Serial.println("==========================================");
 
   // 1. Iniciar siempre el Punto de Acceso (AP) propio del ESP32 (Cero dependencia de internet)
@@ -496,17 +507,19 @@ void setup_wifi() {
   WiFi.softAP(AP_SSID, AP_PASS);
 
   IPAddress apIP = WiFi.softAPIP();
-  Serial.printf("[AP LOCAL ACTIVO] Red Wi-Fi: %s | Contraseña: %s\n", AP_SSID, AP_PASS);
-  Serial.printf("[ACCESO DIRECTO]: http://%s (Abre este enlace desde Celular o PC)\n", apIP.toString().c_str());
+  Serial.printf("[AP LOCAL ACTIVO] Conéctate a la Red Wi-Fi: %s | Pass: %s\n", AP_SSID, AP_PASS);
+  Serial.printf("[ACCESO DIRECTO]: Abre en tu Celular o PC -> http://%s\n", apIP.toString().c_str());
 
-  // 2. Intentar conectar a red externa (Wokwi-GUEST o router)
-  Serial.printf("[STA] Conectando a red Wi-Fi: %s ...\n", STA_SSID);
-  WiFi.begin(STA_SSID, STA_PASS);
+  // 2. Intentar conectar a red externa (Router local o Wokwi)
+  if (strlen(STA_SSID) > 0) {
+    Serial.printf("[STA] Buscando red secundaria: %s ...\n", STA_SSID);
+    WiFi.begin(STA_SSID, STA_PASS);
+  }
 }
 
 void reconnectMQTT() {
   if (!HABILITAR_MQTT) return;
-  if (WiFi.status() != WL_CONNECTED) return;
+  if (WiFi.status() != WL_CONNECTED) return; // Solo si STA conectó exitosamente a un router
 
   if (millis() - ultimoIntentoMQTT > 5000) {
     ultimoIntentoMQTT = millis();
@@ -535,30 +548,25 @@ void setup() {
   // Resolución analógica a 12 bits (0 a 4095)
   analogReadResolution(12);
 
-  // 1. Configuración de pines de LEDs de cuartos
+  // 1. Configuración de pines de LEDs de cuartos (4 LEDs)
   for (int i = 0; i < 4; i++) {
     pinMode(PIN_LEDS[i], OUTPUT);
     digitalWrite(PIN_LEDS[i], LOW);
   }
 
-  // 2. Asignar temporizadores PWM y configurar Servomotores ESP32 (SG90)
-  ESP32PWM::allocateTimer(0);
-  ESP32PWM::allocateTimer(1);
-  ESP32PWM::allocateTimer(2);
-  ESP32PWM::allocateTimer(3);
-
-  servoPuerta.setPeriodHertz(50);
-  servoPuerta.attach(PIN_SERVO_PUERTA, 500, 2400);
+  // 2. Configuración de Puerta y Ventanas como LEDs FÍSICOS (4 LEDs)
+  pinMode(PIN_LED_PUERTA, OUTPUT);
+  digitalWrite(PIN_LED_PUERTA, LOW);
 
   for (int i = 0; i < 3; i++) {
-    servoVentanas[i].setPeriodHertz(50);
-    servoVentanas[i].attach(PIN_VENTANAS[i], 500, 2400);
+    pinMode(PIN_VENTANAS[i], OUTPUT);
+    digitalWrite(PIN_VENTANAS[i], LOW);
   }
 
-  // 3. Sensor de lluvia con PULLUP interno (evita pin flotante en Wokwi y en hardware)
+  // 3. Sensor de lluvia HW-80 + HW-103 v0.1 con pullup interno
   pinMode(PIN_LLUVIA, INPUT_PULLUP);
 
-  // 4. Sensor de nivel de agua HW-038
+  // 4. Sensor de nivel de agua HW-038 (Tinaco)
   pinMode(PIN_TINACO, INPUT);
 
   // 5. Iniciar sensor DHT (Temperatura y Humedad)
@@ -574,10 +582,10 @@ void setup() {
     client.setCallback(mqttCallback);
   }
 
-  // 8. Estado inicial: puerta cerrada (0°), ventanas abiertas (90°) para prueba
+  // 8. Estado inicial: puerta cerrada (LED OFF), ventanas abiertas (LEDs ON)
   moverPuerta(false);
   moverVentanas(true);
-  Serial.println("[DOMÓTIX] Sistema inicializado y listo para operar.");
+  Serial.println("[DOMÓTIX] Sistema con 8 LEDs inicializado correctamente.");
 }
 
 // ==========================================
@@ -596,9 +604,12 @@ void loop() {
     }
   }
 
-  // 3. Monitoreo inteligente del sensor de lluvia HW-080 con muestreo y debouncing
+  // 3. Monitoreo inteligente del sensor de lluvia HW-80 + HW-103 v0.1
   int lecturaLluviaADC = analogRead(PIN_LLUVIA);
-  bool lluviaInstantanea = (lecturaLluviaADC < UMBRAL_LLUVIA_ADC);
+  int lecturaLluviaDO = digitalRead(PIN_LLUVIA);
+
+  // Detección automática en DO (LOW = Lluvia) o en AO (ADC < 2500 = Lluvia):
+  bool lluviaInstantanea = (lecturaLluviaDO == LOW) || (lecturaLluviaADC < UMBRAL_LLUVIA_ADC);
 
   if (lluviaInstantanea) {
     if (contadorFiltroLluvia < 3) contadorFiltroLluvia++;
@@ -611,14 +622,14 @@ void loop() {
 
   if (lluviaConfirmada && !lluviaDetectada) {
     lluviaDetectada = true;
-    Serial.printf("\n>>> [LLUVIA DETECTADA] Lectura ADC: %d (< %d). Asegurando ventanas...\n",
-                  lecturaLluviaADC, UMBRAL_LLUVIA_ADC);
-    moverVentanas(false);
+    Serial.printf("\n>>> [HW-80 / HW-103] ¡LLUVIA DETECTADA! (ADC: %d, DO: %d). Apagando LEDs de Ventanas...\n",
+                  lecturaLluviaADC, lecturaLluviaDO);
+    moverVentanas(false); // Cierra ventanas (apaga LEDs) por seguridad
     enviarTelemetria();
   } else if (!lluviaConfirmada && lluviaDetectada) {
     lluviaDetectada = false;
-    Serial.printf("\n>>> [LLUVIA CESADA] Lectura ADC: %d (>= %d). Operación normal restaurada.\n",
-                  lecturaLluviaADC, UMBRAL_LLUVIA_ADC);
+    Serial.printf("\n>>> [HW-80 / HW-103] LLUVIA CESADA (ADC: %d, DO: %d). Operación normal restaurada.\n",
+                  lecturaLluviaADC, lecturaLluviaDO);
     enviarTelemetria();
   }
 
