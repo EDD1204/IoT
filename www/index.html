@@ -296,7 +296,7 @@
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></svg>
                                 Métricas Ambientales
                             </h2>
-                            <span class="subtle-badge" id="last-ping-badge">Wokwi ESP32</span>
+                            <span class="subtle-badge" id="last-ping-badge">ESP32 Físico</span>
                         </div>
 
                         <!-- 3 Celdas de Métricas -->
@@ -307,7 +307,7 @@
                                     Temperatura
                                 </div>
                                 <div id="temp-val" class="metric-value">-- °C</div>
-                                <div class="metric-foot">DHT22 • GPIO 04</div>
+                                <div class="metric-foot">DHT11 • GPIO 04</div>
                             </div>
 
                             <div class="metric-cell">
@@ -591,17 +591,17 @@
             <div class="card-surface" style="margin-bottom: 24px;">
                 <div class="card-title-row">
                     <h2>⚙️ Mapeo de Pines y Protocolo IoT</h2>
-                    <span class="subtle-badge">Wokwi ESP32-DevKit-C-v4</span>
+                    <span class="subtle-badge">ESP32-DevKit-C-v4 Físico</span>
                 </div>
                 <p style="color: var(--text-secondary); font-size: 0.84rem; line-height: 1.6; margin-bottom: 20px;">
-                    Integración bidireccional entre hardware embebido simulado y aplicación cliente mediante protocolo <strong>MQTT sobre WebSockets seguros (WSS :8884)</strong>. Las lecturas de sensores son empaquetadas en JSON y los comandos de actuadores cuentan con validaciones de seguridad físicas y por software.
+                    Integración bidireccional entre microcontrolador ESP32 y aplicación cliente mediante conexión en <strong>Red Local autónoma (HTTP REST)</strong> o protocolo MQTT. Las lecturas de sensores son empaquetadas en JSON y los comandos de actuadores cuentan con validaciones de seguridad físicas y por software.
                 </p>
 
                 <div class="pinout-layout">
                     <div class="pin-item">
                         <div class="pin-mono-pill">GPIO 04</div>
                         <div class="pin-desc">
-                            <h4>Sensor Digital DHT22</h4>
+                            <h4>Sensor Digital DHT11</h4>
                             <p>Lectura de temperatura ambiente y humedad relativa. Mapeado en tópico <code>uaemex_casa/telemetria</code>.</p>
                         </div>
                     </div>

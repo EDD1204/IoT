@@ -3,12 +3,12 @@
  * Patrón MVC: Servicio de Infraestructura de Red
  * 
  * Diseñado para operar 100% de forma autónoma en Red Local (ESP32 AP http://192.168.4.1)
- * sin requerir conexión a internet, Y AL MISMO TIEMPO compatible de inmediato con
- * el simulador Wokwi mediante WebSockets seguros (HiveMQ).
+ * sin requerir conexión a internet, con compatibilidad opcional para broker remoto
+ * mediante WebSockets seguros (HiveMQ).
  * 
  * Incorpora:
- * - Doble despacho simultáneo (HTTP local + MQTT WSS).
- * - Polling HTTP ultrarrápido (800ms) con cálculo de latencia RTT.
+ * - Despacho HTTP local directo y MQTT opcional.
+ * - Polling HTTP optimizado (1500ms) con cálculo de latencia RTT y tolerancia a jitter.
  * - Cola offline resiliente para comandos cuando no hay conexión.
  */
 class MqttService {
@@ -42,27 +42,24 @@ class MqttService {
     }
 
     /**
-     * Inicia la conexión en modo dual inteligente:
-     * - Sondeo local HTTP al ESP32 (http://192.168.4.1)
-     * - Conexión WebSockets segura (WSS) a Broker MQTT (para Wokwi o acceso remoto)
+     * Inicia la conexión adaptada al modo de operación:
+     * - Modo Local (Por defecto): Sondeo local HTTP al ESP32 (http://192.168.4.1)
+     * - Modo Remoto MQTT: Conexión WebSockets segura (WSS) a Broker MQTT
      */
     connect() {
         this.disconnect();
 
-        // 1. Iniciar sondeo HTTP hacia la IP local
+        // 1. Iniciar sondeo HTTP hacia la IP local del ESP32
         this._startLocalPolling();
 
-        // 2. Iniciar cliente MQTT si la librería está disponible
-        if (typeof mqtt !== 'undefined') {
-            const brokerUrl = this.model.isLocalMode 
-                ? 'wss://broker.hivemq.com:8884/mqtt' 
-                : this.model.brokerUrl;
-            this._startMqttConnection(brokerUrl);
+        // 2. Iniciar cliente MQTT SOLO si el usuario configuró una URL remota de broker (no en modo local AP)
+        if (typeof mqtt !== 'undefined' && !this.model.isLocalMode) {
+            this._startMqttConnection(this.model.brokerUrl);
         }
     }
 
     // ==========================================
-    // CONEXIÓN MQTT WEBSOCKETS (WOKWI / NUBE)
+    // CONEXIÓN MQTT WEBSOCKETS (BROKER REMOTO)
     // ==========================================
     _startMqttConnection(brokerUrl) {
         this.logger.log('info', 'MQTT', `Iniciando conexión a: ${brokerUrl}`);
@@ -83,7 +80,7 @@ class MqttService {
                 if (this.health) this.health.setConnected(true, false);
 
                 if (!this.model.demoMode && !this.isLocalApConnected) {
-                    this.model.setConnectionStatus('online', 'Broker En Vivo (Wokwi / MQTT)');
+                    this.model.setConnectionStatus('online', 'Broker MQTT En Vivo');
                 }
 
                 // Suscribirse a tópicos del ESP32
@@ -130,7 +127,7 @@ class MqttService {
 
             this.client.on('error', (err) => {
                 this.isMqttConnected = false;
-                if (!this.isLocalApConnected) {
+                if (!this.isLocalApConnected && !this.model.isLocalMode) {
                     this.isConnected = false;
                     if (this.health) this.health.setConnected(false, false);
                     if (!this.model.demoMode) {
@@ -141,7 +138,7 @@ class MqttService {
 
             this.client.on('offline', () => {
                 this.isMqttConnected = false;
-                if (!this.isLocalApConnected) {
+                if (!this.isLocalApConnected && !this.model.isLocalMode) {
                     this.isConnected = false;
                     if (this.health) this.health.setConnected(false, false);
                     if (!this.model.demoMode) {
@@ -151,7 +148,7 @@ class MqttService {
             });
 
             this.client.on('reconnect', () => {
-                if (!this.isLocalApConnected && !this.model.demoMode) {
+                if (!this.isLocalApConnected && !this.model.isLocalMode && !this.model.demoMode) {
                     this.model.setConnectionStatus('connecting', 'Reconectando MQTT...');
                 }
             });
@@ -166,6 +163,7 @@ class MqttService {
     // ==========================================
     _startLocalPolling() {
         if (this._localPollTimer) clearInterval(this._localPollTimer);
+        this._consecutivePollErrors = 0;
 
         const poll = async () => {
             if (this.model.demoMode) return;
@@ -174,7 +172,7 @@ class MqttService {
 
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 1200);
+                const timeoutId = setTimeout(() => controller.abort(), 2200);
                 const res = await fetch(`${baseUrl}/api/telemetria`, {
                     signal: controller.signal,
                     mode: 'cors'
@@ -184,11 +182,12 @@ class MqttService {
 
                 if (res.ok) {
                     const data = await res.json();
+                    this._consecutivePollErrors = 0;
                     this.isLocalApConnected = true;
                     this.isConnected = true;
 
                     if (!this.model.demoMode) {
-                        this.model.setConnectionStatus('online', `Red Local DomótiX (${baseUrl.replace('http://', '')})`);
+                        this.model.setConnectionStatus('online', `Red Local ESP32 (${baseUrl.replace('http://', '')})`);
                     }
 
                     if (this.health) {
@@ -212,18 +211,24 @@ class MqttService {
         };
 
         poll();
-        this._localPollTimer = setInterval(poll, 800);
+        this._localPollTimer = setInterval(poll, 1500);
     }
 
     _handleLocalPollFailure(baseUrl) {
-        if (this.isLocalApConnected) {
-            this.isLocalApConnected = false;
-            if (!this.isMqttConnected) {
-                this.isConnected = false;
-                if (!this.model.demoMode) {
-                    this.model.setConnectionStatus('offline', `Conectando a ESP32 (${baseUrl.replace('http://', '')})...`);
+        if (!this._consecutivePollErrors) this._consecutivePollErrors = 0;
+        this._consecutivePollErrors++;
+
+        // Requiere al menos 2 fallos seguidos para evitar parpadeos si hubo una fluctuación de radio
+        if (this._consecutivePollErrors >= 2) {
+            if (this.isLocalApConnected) {
+                this.isLocalApConnected = false;
+                if (!this.isMqttConnected) {
+                    this.isConnected = false;
+                    if (!this.model.demoMode) {
+                        this.model.setConnectionStatus('offline', `Reconectando a ESP32 (${baseUrl.replace('http://', '')})...`);
+                    }
+                    if (this.health) this.health.setConnected(false, true);
                 }
-                if (this.health) this.health.setConnected(false, true);
             }
         }
     }
@@ -289,7 +294,7 @@ class MqttService {
 
         let dispatched = false;
 
-        // 1. Canal MQTT (Simulador Wokwi / HiveMQ)
+        // 1. Canal MQTT (Broker HiveMQ / Remoto)
         if (this.client && this.isMqttConnected) {
             this.publish(mqttTopic, mqttPayload, label);
             dispatched = true;

@@ -119,7 +119,7 @@ class AppController {
                 this.ui.showToast('Modo Simulación Demo activado con telemetría virtual.', 'info', 3000);
             } else {
                 this._stopDemoLoop();
-                this.ui.showToast('Modo Demo finalizado. Retomando conexión en vivo con Wokwi.', 'info', 3000);
+                this.ui.showToast('Modo Demo finalizado. Retomando conexión en vivo con ESP32 físico.', 'info', 3000);
             }
         });
     }
@@ -403,7 +403,7 @@ class AppController {
             this.demoTimer = null;
         }
         if (this.mqtt.isConnected) {
-            this.model.setConnectionStatus('online', 'Wokwi En Vivo');
+            this.model.setConnectionStatus('online', 'ESP32 En Vivo');
         } else {
             this.model.setConnectionStatus('offline', 'Desconectado');
         }

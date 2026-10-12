@@ -18,26 +18,31 @@ const int PIN_VENTANAS[3] = {13, 25, 26}; // V1: GPIO 13, V2: GPIO 25, V3: GPIO 
 
 // 3. Sensores
 #define DHTPIN 4
-#define DHTTYPE DHT22 // Sensor de temperatura y humedad (DHT22 o DHT11)
+#define DHTTYPE DHT11 // Sensor de temperatura y humedad DHT11 físico (cápsula azul)
 #define PIN_TINACO 34 // ADC1_CH6 (Sensor de nivel de agua HW-038 en físico / Potenciómetro)
-#define PIN_LLUVIA 32 // ADC1_CH4 (Sensor de lluvia HW-80 con placa controladora HW-103 v0.1)
+#define PIN_LLUVIA 32 // ADC1_CH4 (Sensor de lluvia HW-80 con placa HW-103 v0.1)
 
 // ==========================================
 // PARÁMETROS DE CALIBRACIÓN DE SENSORES
 // ==========================================
 // Sensor de Nivel de Agua HW-038 (Tinaco):
-// En agua corriente a 3.3V el sensor suele medir entre 1800 y 2200 sumergido al máximo.
-#define TINACO_ADC_MIN 80    // 0% (sensor seco al aire libre)
-#define TINACO_ADC_MAX 2100  // 100% (sensor totalmente sumergido en agua corriente)
+// Curva calibrada por tramos para compensar la amplificación del transistor NPN del HW-038 en 3.3V:
+// - Seco al aire libre: ADC < 350 -> Nivel = 0%
+// - Contacto mínimo (apenas toca el agua, ~5% de la placa sumergida): ADC salta a ~1000 - 1200
+// - Inmersión completa de la placa (~100% sumergida / Tinaco lleno): ADC alcanza ~1900
+#define TINACO_ADC_SECO     350   // Umbral de corte en seco (0%)
+#define TINACO_ADC_MIN_WET  1100  // Umbral de contacto inicial con agua (~5%)
+#define TINACO_ADC_MAX_WET  1900  // Umbral de inmersión total (~100% - Tinaco lleno)
 
 // Sensor de Lluvia HW-80 + Módulo LM393 HW-103 v0.1:
-// Compatible automáticamente si conectas al pin DO o al pin AO del HW-103:
-// - Si usas DO: en seco el comparador da HIGH (1); con gotas conmuta a LOW (0).
-// - Si usas AO: en seco el ADC mide ~3500-4095; con gotas cae a < 2500.
-#define UMBRAL_LLUVIA_ADC 2500 // Umbral para salida analógica (AO)
+// En el ESP32 se lee de forma 100% analógica en GPIO 32 (ADC1_CH4):
+// - Con pin AO: Seco = ~3500-4095; Con gotas de lluvia cae a < 2500.
+// - Con pin DO: Seco = 4095 (HIGH); Con gotas de lluvia cae a 0 (LOW).
+// En ambos casos, ADC < UMBRAL_LLUVIA_ADC detecta la lluvia de forma precisa sin conflicto digital.
+#define UMBRAL_LLUVIA_ADC 2500
 
 // ==========================================
-// CONFIGURACIÓN DE RED (MODO DUAL AP + STA/MQTT)
+// CONFIGURACIÓN DE RED (RED LOCAL AUTÓNOMA ESP32)
 // ==========================================
 // 1. Red propia emitida por el ESP32 (Punto de Acceso Autónomo - 100% Sin Internet)
 const char *AP_SSID = "Domotix-UAEMex";
@@ -48,12 +53,15 @@ const IPAddress AP_IP(192, 168, 4, 1);
 const IPAddress AP_GATEWAY(192, 168, 4, 1);
 const IPAddress AP_SUBNET(255, 255, 255, 0);
 
-// 2. Red externa opcional (Router local "Domotix" o simulador "Wokwi-GUEST")
+// 2. Conexión STA secundaria opcional
+// IMPORTANTE: Mantener en 'false' durante pruebas físicas locales para evitar que el ESP32
+// salte de canal escaneando routers externos, lo que causaba caídas del Wi-Fi AP Domotix.
+const bool HABILITAR_STA = false;
 const char *STA_SSID = "Domotix";
 const char *STA_PASS = "12345678";
 
-// 3. Broker MQTT (Activo solo si STA se conecta a un router o simulador)
-const bool HABILITAR_MQTT = true;
+// 3. Broker MQTT (Solo si HABILITAR_STA = true y hay salida a internet)
+const bool HABILITAR_MQTT = false;
 const char *mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 1883;
 
@@ -78,8 +86,17 @@ bool ventanasAbiertas = false;                  // true si todas están abiertas
 bool lluviaDetectada = false;
 int contadorFiltroLluvia = 0;                   // Filtro antirebote / debouncing para lluvia
 
+// Variables cacheadas de sensores para responder al servidor web al instante (<1ms)
+// sin saturar lecturas ni bloquear el stack TCP/IP
+float cachedTemp = 23.5;
+float cachedHum = 50.0;
+int cachedTinacoNivel = 50;
+int cachedTinacoADC = 1000;
+int cachedLluviaADC = 4095;
+
 unsigned long ultimoEnvio = 0;
 unsigned long ultimoIntentoMQTT = 0;
+unsigned long ultimoMuestreoDHT = 0;
 
 // Declaraciones de funciones
 void enviarTelemetria();
@@ -141,45 +158,21 @@ void moverVentanas(bool abrir) {
 }
 
 // ==========================================
-// CONSTRUCCIÓN DEL JSON DE TELEMETRÍA
+// CONSTRUCCIÓN DEL JSON DE TELEMETRÍA (DESDE CACHÉ RÁPIDO)
 // ==========================================
 String obtenerJsonTelemetria() {
-  float t = dht.readTemperature();
-  float h = dht.readHumidity();
-
-  // Lectura analógica estabilizada del Tinaco HW-038 (Promedio de 4 muestras)
-  long sumaTinaco = 0;
-  for (int i = 0; i < 4; i++) {
-    sumaTinaco += analogRead(PIN_TINACO);
-    delay(2);
-  }
-  int lecturaTinaco = sumaTinaco / 4;
-
-  // Calibración adaptada al HW-038 en agua (0% a 100%)
-  int nivelTinaco = map(lecturaTinaco, TINACO_ADC_MIN, TINACO_ADC_MAX, 0, 100);
-  nivelTinaco = constrain(nivelTinaco, 0, 100);
-
-  if (isnan(t) || isnan(h)) {
-    t = 22.5; // Respaldo térmico en caso de retardo del sensor
-    h = 50.0;
-  }
-
-  int adcRawLluvia = analogRead(PIN_LLUVIA);
-  int doRawLluvia = digitalRead(PIN_LLUVIA);
-
 #if ARDUINOJSON_VERSION_MAJOR >= 7
   JsonDocument doc;
 #else
   StaticJsonDocument<512> doc;
 #endif
 
-  doc["temperatura"] = t;
-  doc["humedad"] = h;
-  doc["nivel_tinaco"] = nivelTinaco;
-  doc["tinaco_adc_raw"] = lecturaTinaco; // Lectura cruda para facilitar calibración
+  doc["temperatura"] = cachedTemp;
+  doc["humedad"] = cachedHum;
+  doc["nivel_tinaco"] = cachedTinacoNivel;
+  doc["tinaco_adc_raw"] = cachedTinacoADC;
   doc["lluvia"] = lluviaDetectada;
-  doc["lluvia_adc"] = adcRawLluvia;       // Lectura analógica HW-80 / HW-103
-  doc["lluvia_do"] = doRawLluvia;         // Lectura digital HW-103 (0 = Lluvia, 1 = Seco)
+  doc["lluvia_adc"] = cachedLluviaADC;
   doc["puerta_abierta"] = puertaAbierta;
   doc["ventanas_abiertas"] = ventanasAbiertas;
 
@@ -210,7 +203,7 @@ void enviarTelemetria() {
 }
 
 // ==========================================
-// CALLBACK MQTT (RECEPCIÓN DESDE LA NUBE / WOKWI)
+// CALLBACK MQTT (RECEPCIÓN EXTERNA)
 // ==========================================
 void mqttCallback(char *topic, byte *payload, unsigned int length) {
 #if ARDUINOJSON_VERSION_MAJOR >= 7
@@ -497,24 +490,32 @@ void setup_web_server() {
 // ==========================================
 void setup_wifi() {
   Serial.println("\n==========================================");
-  Serial.println("  DOMÓTIX UAEMex — MODO DUAL RED LOCAL");
-  Serial.println("  (Punto de Acceso Autónomo 100% Sin Internet)");
+  Serial.println("  DOMÓTIX UAEMex — RED LOCAL AUTÓNOMA ESP32");
+  Serial.println("  (100% Funcional Sin Dependencia de Internet)");
   Serial.println("==========================================");
 
-  // 1. Iniciar siempre el Punto de Acceso (AP) propio del ESP32 (Cero dependencia de internet)
-  WiFi.mode(WIFI_AP_STA);
+  if (HABILITAR_STA && strlen(STA_SSID) > 0) {
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.begin(STA_SSID, STA_PASS);
+    Serial.printf("[STA] Buscando red secundaria: %s ...\n", STA_SSID);
+  } else {
+    // Modo AP puro: máxima estabilidad física. No realiza escaneos que desconecten clientes.
+    WiFi.mode(WIFI_AP);
+  }
+
+  // 1. Desactivar modo de bajo consumo (evita que la antena duerma y desconecte celulares)
+  WiFi.setSleep(false);
+
+  // 2. Transmisión a máxima potencia de antena (19.5 dBm)
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
+
+  // 3. Iniciar Punto de Acceso en Canal 1 con hasta 8 conexiones simultáneas
   WiFi.softAPConfig(AP_IP, AP_GATEWAY, AP_SUBNET);
-  WiFi.softAP(AP_SSID, AP_PASS);
+  WiFi.softAP(AP_SSID, AP_PASS, 1, 0, 8);
 
   IPAddress apIP = WiFi.softAPIP();
-  Serial.printf("[AP LOCAL ACTIVO] Conéctate a la Red Wi-Fi: %s | Pass: %s\n", AP_SSID, AP_PASS);
+  Serial.printf("[AP LOCAL ACTIVO] Red Wi-Fi: %s | Pass: %s\n", AP_SSID, AP_PASS);
   Serial.printf("[ACCESO DIRECTO]: Abre en tu Celular o PC -> http://%s\n", apIP.toString().c_str());
-
-  // 2. Intentar conectar a red externa (Router local o Wokwi)
-  if (strlen(STA_SSID) > 0) {
-    Serial.printf("[STA] Buscando red secundaria: %s ...\n", STA_SSID);
-    WiFi.begin(STA_SSID, STA_PASS);
-  }
 }
 
 void reconnectMQTT() {
@@ -563,8 +564,8 @@ void setup() {
     digitalWrite(PIN_VENTANAS[i], LOW);
   }
 
-  // 3. Sensor de lluvia HW-80 + HW-103 v0.1 con pullup interno
-  pinMode(PIN_LLUVIA, INPUT_PULLUP);
+  // 3. Sensor de lluvia HW-80 en modo analógico puro (sin pullup para no alterar el divisor)
+  pinMode(PIN_LLUVIA, INPUT);
 
   // 4. Sensor de nivel de agua HW-038 (Tinaco)
   pinMode(PIN_TINACO, INPUT);
@@ -576,7 +577,7 @@ void setup() {
   setup_wifi();
   setup_web_server();
 
-  // 7. Configurar cliente MQTT
+  // 7. Configurar cliente MQTT solo si está habilitado
   if (HABILITAR_MQTT) {
     client.setServer(mqtt_server, mqtt_port);
     client.setCallback(mqttCallback);
@@ -585,7 +586,7 @@ void setup() {
   // 8. Estado inicial: puerta cerrada (LED OFF), ventanas abiertas (LEDs ON)
   moverPuerta(false);
   moverVentanas(true);
-  Serial.println("[DOMÓTIX] Sistema con 8 LEDs inicializado correctamente.");
+  Serial.println("[DOMÓTIX] Sistema físico con 8 LEDs inicializado correctamente.");
 }
 
 // ==========================================
@@ -595,7 +596,7 @@ void loop() {
   // 1. Atender peticiones del Servidor Web HTTP local (celular / PC en red local Domotix)
   server.handleClient();
 
-  // 2. Gestionar MQTT de forma no bloqueante solo si STA está conectado a red Wi-Fi
+  // 2. Gestionar MQTT solo si está habilitado y conectado a router externo
   if (HABILITAR_MQTT && WiFi.status() == WL_CONNECTED) {
     if (!client.connected()) {
       reconnectMQTT();
@@ -604,39 +605,71 @@ void loop() {
     }
   }
 
-  // 3. Monitoreo inteligente del sensor de lluvia HW-80 + HW-103 v0.1
-  int lecturaLluviaADC = analogRead(PIN_LLUVIA);
-  int lecturaLluviaDO = digitalRead(PIN_LLUVIA);
+  // 3. Monitoreo del sensor de lluvia HW-80 + HW-103 v0.1 cada 100 ms
+  static unsigned long ultimoMuestreoLluvia = 0;
+  if (millis() - ultimoMuestreoLluvia > 100) {
+    ultimoMuestreoLluvia = millis();
+    cachedLluviaADC = analogRead(PIN_LLUVIA);
 
-  // Detección automática en DO (LOW = Lluvia) o en AO (ADC < 2500 = Lluvia):
-  bool lluviaInstantanea = (lecturaLluviaDO == LOW) || (lecturaLluviaADC < UMBRAL_LLUVIA_ADC);
+    // Detección puramente analógica (Seco > 3000, Lluvia < 2500)
+    bool lluviaInstantanea = (cachedLluviaADC < UMBRAL_LLUVIA_ADC);
 
-  if (lluviaInstantanea) {
-    if (contadorFiltroLluvia < 3) contadorFiltroLluvia++;
-  } else {
-    if (contadorFiltroLluvia > 0) contadorFiltroLluvia--;
+    if (lluviaInstantanea) {
+      if (contadorFiltroLluvia < 3) contadorFiltroLluvia++;
+    } else {
+      if (contadorFiltroLluvia > 0) contadorFiltroLluvia--;
+    }
+
+    // Confirmación tras 2 lecturas consecutivas (antirebote)
+    bool lluviaConfirmada = (contadorFiltroLluvia >= 2);
+
+    if (lluviaConfirmada && !lluviaDetectada) {
+      lluviaDetectada = true;
+      Serial.printf("\n>>> [HW-80] ¡LLUVIA DETECTADA! (ADC: %d < %d). Asegurando ventanas...\n",
+                    cachedLluviaADC, UMBRAL_LLUVIA_ADC);
+      moverVentanas(false); // Cierra ventanas (apaga LEDs) por seguridad
+      enviarTelemetria();
+    } else if (!lluviaConfirmada && lluviaDetectada) {
+      lluviaDetectada = false;
+      Serial.printf("\n>>> [HW-80] LLUVIA CESADA (ADC: %d >= %d). Operación normal restaurada.\n",
+                    cachedLluviaADC, UMBRAL_LLUVIA_ADC);
+      enviarTelemetria();
+    }
   }
 
-  // Se confirma lluvia tras 2 lecturas consecutivas para evitar falsos positivos
-  bool lluviaConfirmada = (contadorFiltroLluvia >= 2);
-
-  if (lluviaConfirmada && !lluviaDetectada) {
-    lluviaDetectada = true;
-    Serial.printf("\n>>> [HW-80 / HW-103] ¡LLUVIA DETECTADA! (ADC: %d, DO: %d). Apagando LEDs de Ventanas...\n",
-                  lecturaLluviaADC, lecturaLluviaDO);
-    moverVentanas(false); // Cierra ventanas (apaga LEDs) por seguridad
-    enviarTelemetria();
-  } else if (!lluviaConfirmada && lluviaDetectada) {
-    lluviaDetectada = false;
-    Serial.printf("\n>>> [HW-80 / HW-103] LLUVIA CESADA (ADC: %d, DO: %d). Operación normal restaurada.\n",
-                  lecturaLluviaADC, lecturaLluviaDO);
-    enviarTelemetria();
-  }
-
-  // 4. Envío y actualización periódica cada 2 segundos
+  // 4. Muestreo periódico de DHT11 y Tinaco cada 2000 ms (sin bloquear el servidor web)
   unsigned long tiempoActual = millis();
-  if (tiempoActual - ultimoEnvio > 2000) {
-    ultimoEnvio = tiempoActual;
+  if (tiempoActual - ultimoMuestreoDHT >= 2000) {
+    ultimoMuestreoDHT = tiempoActual;
+
+    float t = dht.readTemperature();
+    float h = dht.readHumidity();
+    if (!isnan(t) && !isnan(h)) {
+      cachedTemp = t;
+      cachedHum = h;
+    }
+
+    // Muestreo analógico del Tinaco HW-038 (promedio de 4 lecturas rápidas)
+    long sumaTinaco = 0;
+    for (int i = 0; i < 4; i++) {
+      sumaTinaco += analogRead(PIN_TINACO);
+      delay(1);
+    }
+    cachedTinacoADC = sumaTinaco / 4;
+
+    // Cálculo no lineal por tramos del nivel de agua del Tinaco
+    if (cachedTinacoADC <= TINACO_ADC_SECO) {
+      cachedTinacoNivel = 0; // Seco al aire libre
+    } else if (cachedTinacoADC < TINACO_ADC_MIN_WET) {
+      // Transición inicial de contacto superficial (0% a 5%)
+      cachedTinacoNivel = map(cachedTinacoADC, TINACO_ADC_SECO, TINACO_ADC_MIN_WET, 0, 5);
+    } else {
+      // Inmersión real del sensor (5% a 100%)
+      cachedTinacoNivel = map(cachedTinacoADC, TINACO_ADC_MIN_WET, TINACO_ADC_MAX_WET, 5, 100);
+    }
+    cachedTinacoNivel = constrain(cachedTinacoNivel, 0, 100);
+
+    // Transmitir telemetría cada 2 segundos
     enviarTelemetria();
   }
 }

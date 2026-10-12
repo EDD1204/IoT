@@ -1,7 +1,7 @@
 {
   "name": "iot---ihm",
   "version": "1.0.0",
-  "description": "Panel web interactivo de control domótico y telemetría en tiempo real conectado mediante protocolo MQTT (vía WebSockets con HiveMQ) para simulación con ESP32 / Wokwi.",
+  "description": "Panel web interactivo de control domótico y telemetría en tiempo real conectado de forma autónoma en red local al ESP32 (y compatible con MQTT) para pruebas físicas en protoboard.",
   "main": "index.js",
   "scripts": {
     "sync": "cp -r index.html css js manifest.json sw.js icon-192.png icon-512.png www/ && npx cap sync android",

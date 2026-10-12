@@ -225,7 +225,7 @@ class HouseModel {
 
     setConnectionStatus(status, text) {
         this.connection.status = status;
-        this.connection.text = text || (status === 'online' ? 'Wokwi En Vivo' : status === 'offline' ? 'Desconectado' : 'Conectando...');
+        this.connection.text = text || (status === 'online' ? 'ESP32 En Vivo' : status === 'offline' ? 'Desconectado' : 'Conectando...');
         this.connection.lastPing = new Date();
         this.emit('connection:changed', this.connection);
     }
