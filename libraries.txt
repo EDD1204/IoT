@@ -1,0 +1,4 @@
+ESP32Servo
+DHT sensor library
+PubSubClient
+ArduinoJson

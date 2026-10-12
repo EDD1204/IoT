@@ -1,46 +1,45 @@
 #include <ArduinoJson.h>
 #include <DHT.h>
+#include <ESP32Servo.h>
 #include <PubSubClient.h>
 #include <WebServer.h>
 #include <WiFi.h>
 
 // ==========================================
-// CONFIGURACIÓN DE PINES (HARDWARE FÍSICO)
+// CONFIGURACIÓN DE PINES (HARDWARE FÍSICO / WOKWI)
 // ==========================================
-// 1. Iluminación de recámaras (4 LEDs / Módulo Relevador)
-const int PIN_LEDS[4] = {18, 19, 21, 22};
+// 1. Iluminación de recámaras (4 LEDs físicos / Módulo Relevador)
+const int PIN_LEDS[4] = {18, 19, 21, 22}; // Cuarto 1: 18, Cuarto 2: 19, Cuarto 3: 21, Cuarto 4: 22
 
-// 2. Actuadores de Puerta y Ventanas (LEDs o Relevadores)
-#define PIN_LED_PUERTA 27 // HIGH = Abierta (90°), LOW = Cerrada (0°)
+// 2. Actuadores de Puerta y Ventanas (Servomotores PWM SG90)
+#define PIN_SERVO_PUERTA 27 // GPIO 27 (Puerta principal: 0° cerrada, 90° abierta)
+#define PIN_LED_PUERTA 27   // Alias de compatibilidad
 const int PIN_VENTANAS[3] = {13, 25, 26}; // V1: GPIO 13, V2: GPIO 25, V3: GPIO 26
 
 // 3. Sensores
 #define DHTPIN 4
-#define DHTTYPE DHT22 // Cambiar a DHT11 si el sensor físico es azul (DHT11) o blanco (DHT22)
-#define PIN_TINACO 34 // ADC1_CH6 (Sensor de nivel de agua HW-038)
-#define PIN_LLUVIA 32 // ADC1_CH4 (Sensor de lluvia HW-080: compatible con AO o DO)
+#define DHTTYPE DHT22 // Sensor de temperatura y humedad (DHT22 o DHT11)
+#define PIN_TINACO 34 // ADC1_CH6 (Potenciómetro en Wokwi / Sensor de nivel de agua HW-038 en físico)
+#define PIN_LLUVIA 32 // ADC1_CH4 (Botón a GND en Wokwi / Sensor de lluvia HW-080 DO/AO en físico)
 
 // ==========================================
 // PARÁMETROS DE CALIBRACIÓN DE SENSORES
 // ==========================================
 // Sensor de Nivel de Agua HW-038 (Tinaco):
-// En el ADC del ESP32 (0 - 4095 a 3.3V):
-// - Completamente seco: suele leer entre 0 y 100.
-// - Completamente sumergido en agua corriente: suele leer entre 1800 y 2400 (nunca 4095 debido a la resistencia del agua).
-#define TINACO_ADC_MIN 60    // Nivel 0% (sensor seco)
-#define TINACO_ADC_MAX 2200  // Nivel 100% (sensor totalmente cubierto de agua)
+// Escala adaptada de 0 a 100%:
+#define TINACO_ADC_MIN 50    // 0% (sensor seco / potenciómetro al mínimo)
+#define TINACO_ADC_MAX 3500  // 100% (sensor totalmente sumergido / pot al máximo)
 
-// Sensor de Lluvia HW-080:
-// Compatible automáticamente tanto si se conecta al pin digital (DO) o analógico (AO):
-// - Si se conecta a AO: en seco mide ~3500-4095; con gotas de lluvia el voltaje cae y el ADC baja a < 2500.
-// - Si se conecta a DO: en seco el comparador da HIGH (~4095); con lluvia conmuta a LOW (~0).
-// Por lo tanto, un umbral ADC en 2600 detecta lluvia de forma universal en ambos casos.
-#define UMBRAL_LLUVIA_ADC 2600 // Por debajo de este valor se considera LLUVIA activa
+// Sensor de Lluvia HW-080 / Pulsador Wokwi:
+// Con pinMode(PIN_LLUVIA, INPUT_PULLUP):
+// - Sin lluvia / pulsador libre: ~4095
+// - Lluvia activa / pulsador presionado: ~0 (< 2600)
+#define UMBRAL_LLUVIA_ADC 2600
 
 // ==========================================
-// CONFIGURACIÓN DE RED (MODO RED LOCAL DOMÓTIX)
+// CONFIGURACIÓN DE RED (MODO DUAL AP + STA/MQTT)
 // ==========================================
-// Red propia emitida por el ESP32 (Punto de Acceso 100% Autónomo - Sin Internet)
+// 1. Red propia emitida por el ESP32 (Punto de Acceso Autónomo - 100% Sin Internet)
 const char *AP_SSID = "Domotix-UAEMex";
 const char *AP_PASS = "12345678"; // Contraseña de la red Wi-Fi del ESP32
 
@@ -49,13 +48,13 @@ const IPAddress AP_IP(192, 168, 4, 1);
 const IPAddress AP_GATEWAY(192, 168, 4, 1);
 const IPAddress AP_SUBNET(255, 255, 255, 0);
 
-// Red externa opcional (Solo si se conecta a un router local "Domotix" sin internet)
-const char *STA_SSID = ""; // Dejar vacío en modo AP local Domotix-UAEMex
+// 2. Red externa opcional / Simulador Wokwi
+const char *STA_SSID = "Wokwi-GUEST"; // Se conecta automáticamente en Wokwi o cambia a tu Wi-Fi
 const char *STA_PASS = "";
 
-// Modo de operación: false = 100% Local HTTP Autónomo (Cero dependencia de internet)
-const bool HABILITAR_MQTT = false; // Activar solo si se cuenta con broker MQTT local o en la nube
-const char *mqtt_server = "192.168.4.1";
+// 3. Broker MQTT (Activo cuando STA está conectado a red externa o Wokwi)
+const bool HABILITAR_MQTT = true;
+const char *mqtt_server = "broker.hivemq.com";
 const int mqtt_port = 1883;
 
 // Tópicos MQTT estándar del proyecto DomótiX
@@ -72,6 +71,9 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 WebServer server(80);
 
+Servo servoPuerta;
+Servo servoVentanas[3];
+
 bool estadoLuces[4] = {false, false, false, false};
 bool puertaAbierta = false;
 bool estadoVentanas[3] = {false, false, false}; // Estado individual de V1, V2, V3
@@ -86,6 +88,7 @@ unsigned long ultimoIntentoMQTT = 0;
 void enviarTelemetria();
 void setup_web_server();
 void setCORSHeaders();
+void handleOptions();
 void moverPuerta(bool abrir);
 void controlarVentana(int numVentana, bool abrir);
 void moverVentanas(bool abrir);
@@ -105,10 +108,9 @@ void controlarLuz(int cuarto, bool estado) {
 
 void moverPuerta(bool abrir) {
   puertaAbierta = abrir;
-  digitalWrite(PIN_LED_PUERTA, abrir ? HIGH : LOW);
-  Serial.printf("[ACCIÓN] Puerta -> %s (GPIO %d -> %s)\n",
-                abrir ? "ABIERTA (90°)" : "CERRADA (0°)",
-                PIN_LED_PUERTA, abrir ? "HIGH" : "LOW");
+  servoPuerta.write(abrir ? 90 : 0);
+  Serial.printf("[ACCIÓN] Puerta -> %s (Servo en GPIO %d a %d°)\n",
+                abrir ? "ABIERTA" : "CERRADA", PIN_SERVO_PUERTA, abrir ? 90 : 0);
 }
 
 void controlarVentana(int numVentana, bool abrir) {
@@ -118,10 +120,10 @@ void controlarVentana(int numVentana, bool abrir) {
   }
   if (numVentana >= 1 && numVentana <= 3) {
     estadoVentanas[numVentana - 1] = abrir;
-    digitalWrite(PIN_VENTANAS[numVentana - 1], abrir ? HIGH : LOW);
+    servoVentanas[numVentana - 1].write(abrir ? 90 : 0);
     ventanasAbiertas = (estadoVentanas[0] && estadoVentanas[1] && estadoVentanas[2]);
-    Serial.printf("[ACCIÓN] Ventana %d (GPIO %d) -> %s\n",
-                  numVentana, PIN_VENTANAS[numVentana - 1], abrir ? "ABIERTA (HIGH)" : "CERRADA (LOW)");
+    Serial.printf("[ACCIÓN] Ventana %d (GPIO %d) -> %s (Servo a %d°)\n",
+                  numVentana, PIN_VENTANAS[numVentana - 1], abrir ? "ABIERTA" : "CERRADA", abrir ? 90 : 0);
   }
 }
 
@@ -132,11 +134,11 @@ void moverVentanas(bool abrir) {
   }
   for (int i = 0; i < 3; i++) {
     estadoVentanas[i] = abrir;
-    digitalWrite(PIN_VENTANAS[i], abrir ? HIGH : LOW);
+    servoVentanas[i].write(abrir ? 90 : 0);
   }
   ventanasAbiertas = abrir;
-  Serial.printf("[ACCIÓN] Todas las Ventanas -> %s (GPIO 13, 25, 26 -> %s)\n",
-                abrir ? "ABIERTAS" : "CERRADAS", abrir ? "HIGH" : "LOW");
+  Serial.printf("[ACCIÓN] Todas las Ventanas -> %s (Servos en GPIO 13, 25, 26 a %d°)\n",
+                abrir ? "ABIERTAS" : "CERRADAS", abrir ? 90 : 0);
 }
 
 // ==========================================
@@ -154,7 +156,7 @@ String obtenerJsonTelemetria() {
   }
   int lecturaTinaco = sumaTinaco / 4;
 
-  // Calibración adaptada a la conductividad real del HW-038 en agua
+  // Calibración adaptada (0 a 100%)
   int nivelTinaco = map(lecturaTinaco, TINACO_ADC_MIN, TINACO_ADC_MAX, 0, 100);
   nivelTinaco = constrain(nivelTinaco, 0, 100);
 
@@ -204,7 +206,7 @@ void enviarTelemetria() {
 }
 
 // ==========================================
-// CALLBACK MQTT (RECEPCIÓN DESDE LA NUBE)
+// CALLBACK MQTT (RECEPCIÓN DESDE WOKWI / BROKER)
 // ==========================================
 void mqttCallback(char *topic, byte *payload, unsigned int length) {
 #if ARDUINOJSON_VERSION_MAJOR >= 7
@@ -258,12 +260,20 @@ void handleOptions() {
 }
 
 void handleApiTelemetria() {
+  if (server.method() == HTTP_OPTIONS) {
+    handleOptions();
+    return;
+  }
   setCORSHeaders();
   String json = obtenerJsonTelemetria();
   server.send(200, "application/json", json);
 }
 
 void handleApiLuz() {
+  if (server.method() == HTTP_OPTIONS) {
+    handleOptions();
+    return;
+  }
   setCORSHeaders();
   if (server.hasArg("cuarto") && server.hasArg("estado")) {
     int cuarto = server.arg("cuarto").toInt();
@@ -277,6 +287,10 @@ void handleApiLuz() {
 }
 
 void handleApiPuerta() {
+  if (server.method() == HTTP_OPTIONS) {
+    handleOptions();
+    return;
+  }
   setCORSHeaders();
   if (server.hasArg("abrir")) {
     bool abrir = (server.arg("abrir") == "1" || server.arg("abrir") == "true");
@@ -289,6 +303,10 @@ void handleApiPuerta() {
 }
 
 void handleApiVentanas() {
+  if (server.method() == HTTP_OPTIONS) {
+    handleOptions();
+    return;
+  }
   setCORSHeaders();
   if (server.hasArg("abrir")) {
     bool abrir = (server.arg("abrir") == "1" || server.arg("abrir") == "true");
@@ -346,7 +364,7 @@ void handleRoot() {
     </div>
 
     <div class="card">
-      <h3>🚪 Accesos y Ventanas</h3>
+      <h3>🚪 Accesos y Ventanas (Servomotores)</h3>
       <div class="grid">
         <button id="btn-door" onclick="togglePuerta()">Puerta (GPIO 27)</button>
         <button id="btn-win-all" onclick="toggleTodasVentanas()">Todas Ventanas</button>
@@ -447,16 +465,17 @@ void handleRoot() {
 }
 
 void setup_web_server() {
+  // Manejo de preflight CORS (OPTIONS) prioritario
+  server.on("/api/telemetria", HTTP_OPTIONS, handleOptions);
+  server.on("/api/luz", HTTP_OPTIONS, handleOptions);
+  server.on("/api/puerta", HTTP_OPTIONS, handleOptions);
+  server.on("/api/ventanas", HTTP_OPTIONS, handleOptions);
+
   server.on("/", HTTP_GET, handleRoot);
   server.on("/api/telemetria", HTTP_GET, handleApiTelemetria);
   server.on("/api/luz", HTTP_ANY, handleApiLuz);
   server.on("/api/puerta", HTTP_ANY, handleApiPuerta);
   server.on("/api/ventanas", HTTP_ANY, handleApiVentanas);
-
-  server.on("/api/telemetria", HTTP_OPTIONS, handleOptions);
-  server.on("/api/luz", HTTP_OPTIONS, handleOptions);
-  server.on("/api/puerta", HTTP_OPTIONS, handleOptions);
-  server.on("/api/ventanas", HTTP_OPTIONS, handleOptions);
 
   server.begin();
   Serial.println("[HTTP] Servidor Web local iniciado en puerto 80 (http://192.168.4.1).");
@@ -467,38 +486,35 @@ void setup_web_server() {
 // ==========================================
 void setup_wifi() {
   Serial.println("\n==========================================");
-  Serial.println("  DOMÓTIX UAEMex — RED LOCAL AUTÓNOMA");
-  Serial.println("  (100% Funcional Sin Dependencia de Internet)");
+  Serial.println("  DOMÓTIX UAEMex — MODO DUAL INTELIGENTE");
+  Serial.println("  (Red Local AP + Soporte Wokwi / MQTT)");
   Serial.println("==========================================");
 
-  // Iniciar Punto de Acceso (AP) con IP estática 192.168.4.1
-  WiFi.mode(WIFI_AP);
+  // 1. Iniciar siempre el Punto de Acceso (AP) propio del ESP32 (Cero dependencia de internet)
+  WiFi.mode(WIFI_AP_STA);
   WiFi.softAPConfig(AP_IP, AP_GATEWAY, AP_SUBNET);
   WiFi.softAP(AP_SSID, AP_PASS);
 
   IPAddress apIP = WiFi.softAPIP();
   Serial.printf("[AP LOCAL ACTIVO] Red Wi-Fi: %s | Contraseña: %s\n", AP_SSID, AP_PASS);
-  Serial.printf("[ACCESO DIRECTO]: http://%s (Abre este enlace desde tu Celular o PC)\n", apIP.toString().c_str());
+  Serial.printf("[ACCESO DIRECTO]: http://%s (Abre este enlace desde Celular o PC)\n", apIP.toString().c_str());
 
-  // Si se configuró una red local secundaria (STA):
-  if (strlen(STA_SSID) > 0) {
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.begin(STA_SSID, STA_PASS);
-    Serial.printf("[STA] Conectando a red local secundaria: %s ...\n", STA_SSID);
-  }
+  // 2. Intentar conectar a red externa (Wokwi-GUEST o router)
+  Serial.printf("[STA] Conectando a red Wi-Fi: %s ...\n", STA_SSID);
+  WiFi.begin(STA_SSID, STA_PASS);
 }
 
 void reconnectMQTT() {
   if (!HABILITAR_MQTT) return;
   if (WiFi.status() != WL_CONNECTED) return;
 
-  if (millis() - ultimoIntentoMQTT > 10000) {
+  if (millis() - ultimoIntentoMQTT > 5000) {
     ultimoIntentoMQTT = millis();
     Serial.printf("[MQTT] Conectando a broker %s:%d...\n", mqtt_server, mqtt_port);
     String clientId = "UAEMexIoTClient-" + String(random(0xffff), HEX);
 
     if (client.connect(clientId.c_str())) {
-      Serial.println(" [MQTT] ¡Conectado!");
+      Serial.println(" [MQTT] ¡Conectado exitosamente!");
       client.subscribe(TOPIC_LUCES);
       client.subscribe(TOPIC_PUERTA);
       client.subscribe(TOPIC_VENTANAS);
@@ -519,44 +535,49 @@ void setup() {
   // Resolución analógica a 12 bits (0 a 4095)
   analogReadResolution(12);
 
-  // Configuración de pines de LEDs de cuartos
+  // 1. Configuración de pines de LEDs de cuartos
   for (int i = 0; i < 4; i++) {
     pinMode(PIN_LEDS[i], OUTPUT);
     digitalWrite(PIN_LEDS[i], LOW);
   }
 
-  // Configuración de Puerta y Ventanas individuales (V1, V2, V3)
-  pinMode(PIN_LED_PUERTA, OUTPUT);
-  digitalWrite(PIN_LED_PUERTA, LOW);
+  // 2. Asignar temporizadores PWM y configurar Servomotores ESP32 (SG90)
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+
+  servoPuerta.setPeriodHertz(50);
+  servoPuerta.attach(PIN_SERVO_PUERTA, 500, 2400);
 
   for (int i = 0; i < 3; i++) {
-    pinMode(PIN_VENTANAS[i], OUTPUT);
-    digitalWrite(PIN_VENTANAS[i], LOW);
+    servoVentanas[i].setPeriodHertz(50);
+    servoVentanas[i].attach(PIN_VENTANAS[i], 500, 2400);
   }
 
-  // Sensor de lluvia HW-080 en modo analógico puro (sin pullup interno para no distorsionar el divisor de tensión)
-  pinMode(PIN_LLUVIA, INPUT);
+  // 3. Sensor de lluvia con PULLUP interno (evita pin flotante en Wokwi y en hardware)
+  pinMode(PIN_LLUVIA, INPUT_PULLUP);
 
-  // Sensor de nivel de agua HW-038
+  // 4. Sensor de nivel de agua HW-038
   pinMode(PIN_TINACO, INPUT);
 
-  // Iniciar sensor DHT (Temperatura y Humedad)
+  // 5. Iniciar sensor DHT (Temperatura y Humedad)
   dht.begin();
 
-  // Iniciar red Wi-Fi y servidor local
+  // 6. Iniciar red Wi-Fi y servidor local
   setup_wifi();
   setup_web_server();
 
-  // Configurar cliente MQTT solo si está habilitado
+  // 7. Configurar cliente MQTT
   if (HABILITAR_MQTT) {
     client.setServer(mqtt_server, mqtt_port);
     client.setCallback(mqttCallback);
   }
 
-  // Estado inicial
+  // 8. Estado inicial: puerta cerrada (0°), ventanas abiertas (90°) para prueba
   moverPuerta(false);
-  moverVentanas(true); // Se abren inicialmente para poder verificar su cierre con agua
-  Serial.println("[DOMÓTIX] Sistema inicializado y listo para operar en Red Local.");
+  moverVentanas(true);
+  Serial.println("[DOMÓTIX] Sistema inicializado y listo para operar.");
 }
 
 // ==========================================
@@ -566,7 +587,7 @@ void loop() {
   // 1. Atender peticiones del Servidor Web HTTP local (celular / PC en red local Domotix)
   server.handleClient();
 
-  // 2. Gestionar MQTT solo si está habilitado (cero retrasos en modo local)
+  // 2. Gestionar MQTT de forma no bloqueante solo si STA está conectado a red Wi-Fi
   if (HABILITAR_MQTT && WiFi.status() == WL_CONNECTED) {
     if (!client.connected()) {
       reconnectMQTT();

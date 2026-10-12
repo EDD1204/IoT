@@ -9,12 +9,7 @@ class HouseModel {
 
         // Configuración de Conexión de Red (Por defecto: Red Local DomótiX sin internet)
         const savedBroker = localStorage.getItem('domotix_broker_url');
-        if (!savedBroker || savedBroker === 'wss://broker.hivemq.com:8884/mqtt') {
-            this.brokerUrl = 'http://192.168.4.1';
-            localStorage.setItem('domotix_broker_url', this.brokerUrl);
-        } else {
-            this.brokerUrl = savedBroker;
-        }
+        this.brokerUrl = savedBroker || 'http://192.168.4.1';
         this.topicPrefix = localStorage.getItem('domotix_topic_prefix') || 'uaemex_casa';
 
         // Preferencias de usuario
